@@ -344,13 +344,13 @@ class _VehicleEditorState extends State<VehicleEditor> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Constrained(
               maxWidth: 600,
-              child: FilledButton.icon(
+              child: SizedBox(width: double.infinity, child: FilledButton.icon(
                 onPressed: _busy ? null : _save,
                 icon: _busy
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.cloud_upload_outlined),
                 label: Text(_busy ? 'Salvataggio…' : _isNew ? 'Salva e pubblica' : 'Salva modifiche'),
-              ),
+              )),
             ),
           ),
         ),

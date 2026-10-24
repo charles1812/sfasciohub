@@ -34,12 +34,10 @@ android {
         create("explore") {
             dimension = "app"
             applicationIdSuffix = ".esplora"
-            resValue("string", "app_name", "SfascioHub")
         }
         create("gestione") {
             dimension = "app"
             applicationIdSuffix = ".gestione"
-            resValue("string", "app_name", "SfascioHub Gestione")
         }
     }
 
