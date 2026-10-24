@@ -88,6 +88,8 @@ class _VehicleEditorState extends State<VehicleEditor> {
           _photos[i] = uploaded;
         }
       }
+      final order = [for (final p in _photos) (p as VehiclePhoto).id];
+      if (order.isNotEmpty) await repo.reorderPhotos(saved, order);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_v.published ? '${_v.title} è online' : '${_v.title} salvato (non pubblicato)'),

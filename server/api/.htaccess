@@ -1,0 +1,14 @@
+# Alcuni hosting tolgono l'header Authorization: lo passiamo a PHP
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+Options -Indexes
+
+# configurazione e database locali non accessibili dal web
+<FilesMatch "^(config\.php|.*\.sqlite)$">
+  Require all denied
+</FilesMatch>

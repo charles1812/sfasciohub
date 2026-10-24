@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../config.dart';
 import 'demo_repository.dart';
 import 'models.dart';
-import 'supabase_repository.dart';
+import 'php_repository.dart';
 
 class AppUser {
   const AppUser({required this.id, required this.email});
@@ -18,13 +18,13 @@ class RepoException implements Exception {
   String toString() => message;
 }
 
-/// Tutto ciò che l'app sa fare con i dati. Due implementazioni: Supabase
-/// (piattaforma vera, condivisa) e demo (dati di esempio sul dispositivo).
+/// Tutto ciò che l'app sa fare con i dati. Due implementazioni: l'API PHP sul
+/// server (piattaforma vera, condivisa) e demo (dati di esempio sul dispositivo).
 abstract class Repository extends ChangeNotifier {
   static late final Repository instance;
 
   static Future<void> init() async {
-    instance = AppConfig.hasSupabase ? await SupabaseRepository.create() : await DemoRepository.create();
+    instance = AppConfig.hasServer ? await PhpRepository.create() : await DemoRepository.create();
   }
 
   bool get isDemo;
@@ -55,4 +55,7 @@ abstract class Repository extends ChangeNotifier {
   Future<void> deleteVehicle(Vehicle v);
   Future<VehiclePhoto> addPhoto(Vehicle v, Uint8List jpeg, int position);
   Future<void> removePhoto(Vehicle v, VehiclePhoto photo);
+
+  /// Nuovo ordine delle foto già salvate (la prima è la copertina).
+  Future<void> reorderPhotos(Vehicle v, List<String> photoIds);
 }

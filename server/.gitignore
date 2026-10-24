@@ -1,0 +1,5 @@
+api/config.php
+api/*.sqlite
+uploads/*
+!uploads/.htaccess
+!uploads/.gitkeep

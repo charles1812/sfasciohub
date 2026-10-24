@@ -8,7 +8,7 @@ import 'models.dart';
 import 'repository.dart';
 
 const demoEmail = 'demo@sfasciohub.it';
-const demoPassword = 'demo123';
+const demoPassword = 'demo1234';
 
 /// Dati di esempio salvati sul dispositivo (nel browser: localStorage, che il
 /// sito pubblico e la console di gestione condividono). Serve a provare tutto
@@ -16,7 +16,7 @@ const demoPassword = 'demo123';
 class DemoRepository extends Repository {
   DemoRepository._(this._prefs);
 
-  static const _key = 'sfasciohub_demo_v1';
+  static const _key = 'sfasciohub_demo_v2';
   final SharedPreferences _prefs;
   final _uuid = const Uuid();
 
@@ -138,7 +138,7 @@ class DemoRepository extends Repository {
   Future<bool> signUp(String email, String password) async {
     final e = email.trim().toLowerCase();
     if (!e.contains('@')) throw RepoException('Inserisci un indirizzo email valido.');
-    if (password.length < 6) throw RepoException('La password deve avere almeno 6 caratteri.');
+    if (password.length < 8) throw RepoException('La password deve avere almeno 8 caratteri.');
     if (_users.containsKey(e)) throw RepoException('Esiste già un account con questa email.');
     _users[e] = password;
     _session = e;
@@ -227,6 +227,17 @@ class DemoRepository extends Repository {
   @override
   Future<void> removePhoto(Vehicle v, VehiclePhoto photo) async {
     _vehicles.firstWhere((x) => x.id == v.id).photos.removeWhere((p) => p.id == photo.id);
+    await _save();
+  }
+
+  @override
+  Future<void> reorderPhotos(Vehicle v, List<String> photoIds) async {
+    final stored = _vehicles.firstWhere((x) => x.id == v.id);
+    final byId = {for (final p in stored.photos) p.id: p};
+    stored.photos = [
+      for (final (i, id) in photoIds.indexed)
+        if (byId[id] case final p?) VehiclePhoto(id: p.id, url: p.url, position: i),
+    ];
     await _save();
   }
 

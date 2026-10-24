@@ -403,7 +403,7 @@ class AboutTab extends StatelessWidget {
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
             FilledButton.icon(
-              onPressed: () => openUrl('${AppConfig.siteUrl}gestione/'),
+              onPressed: () => openUrl('${AppConfig.site}gestione/'),
               icon: const Icon(Icons.dashboard_customize_outlined),
               label: const Text('Apri la gestione web'),
             ),

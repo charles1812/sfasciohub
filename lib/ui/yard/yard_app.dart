@@ -101,7 +101,8 @@ class _AuthPageState extends State<AuthPage> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final demo = Repository.instance.isDemo;
+    final local = Repository.instance.isDemo;
+    final demo = local || AppConfig.demoLogin;
     return Scaffold(
       backgroundColor: Brand.asphalt,
       body: SafeArea(
@@ -125,8 +126,8 @@ class _AuthPageState extends State<AuthPage> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(color: Brand.orangeSoft, borderRadius: BorderRadius.circular(12)),
                           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                            const Text('Versione demo: i dati restano su questo dispositivo.',
-                                style: TextStyle(color: Color(0xFF6B300B), fontWeight: FontWeight.w600)),
+                            Text(local ? 'Versione demo: i dati restano su questo dispositivo.' : "Vuoi solo provare? C'è un piazzale di prova condiviso.",
+                                style: const TextStyle(color: Color(0xFF6B300B), fontWeight: FontWeight.w600)),
                             const SizedBox(height: 6),
                             TextButton.icon(
                               onPressed: () {
@@ -173,7 +174,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                       const Divider(height: 24),
                       TextButton.icon(
-                        onPressed: () => openUrl(AppConfig.siteUrl),
+                        onPressed: () => openUrl(AppConfig.site),
                         icon: const Icon(Icons.public, size: 18),
                         label: const Text('Vedi il sito pubblico'),
                       ),
@@ -227,7 +228,7 @@ class _YardHomeState extends State<YardHome> {
           IconButton(
             tooltip: 'Vedi sul sito pubblico',
             icon: const Icon(Icons.public),
-            onPressed: () => openUrl('${AppConfig.siteUrl}#/sfasciacarrozze/${widget.yard.id}'),
+            onPressed: () => openUrl('${AppConfig.site}#/sfasciacarrozze/${widget.yard.id}'),
           ),
           PopupMenuButton<String>(
             onSelected: (v) { if (v == 'out') Repository.instance.signOut(); },

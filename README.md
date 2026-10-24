@@ -11,7 +11,7 @@ in quale sfasciacarrozze c'è l'auto giusta e quali parti sono integre.
 | 🛠️ **SfascioHub Gestione** | chi lavora nel piazzale | [Android](https://github.com/charles1812/sfasciohub/releases/latest) · [Windows](https://github.com/charles1812/sfasciohub/releases/latest) · [Web](https://charles1812.github.io/sfasciohub/gestione/) |
 
 > **Provala subito:** apri la [gestione web](https://charles1812.github.io/sfasciohub/gestione/), tocca
-> **"Entra come sfasciacarrozze di prova"** (`demo@sfasciohub.it` / `demo123`) e aggiungi un veicolo.
+> **"Entra come sfasciacarrozze di prova"** (`demo@sfasciohub.it` / `demo1234`) e aggiungi un veicolo.
 > Poi apri il [sito pubblico](https://charles1812.github.io/sfasciohub/) nello stesso browser: lo trovi già lì.
 
 ## Cosa fa
@@ -33,58 +33,74 @@ in quale sfasciacarrozze c'è l'auto giusta e quali parti sono integre.
 ## Architettura
 
 ```
-                ┌──────────────────────────┐
-  Gestione  ──▶ │        Supabase          │ ◀── Sito / app pubblica
- (Flutter:      │  Postgres + Auth + foto  │     (Flutter web e Android,
-  Android,      │  Row Level Security:     │      solo lettura)
-  Windows, web) │  ognuno scrive solo i    │
-                │  propri veicoli          │
-                └──────────────────────────┘
+                ┌──────────────────────────────┐
+  Gestione  ──▶ │   Server PHP (es. Hostinger) │ ◀── Sito / app pubblica
+ (Flutter:      │   api/  → API REST in PHP    │     (Flutter web e Android,
+  Android,      │   MySQL → veicoli, account   │      solo lettura)
+  Windows, web) │   uploads/ → foto            │
+                └──────────────────────────────┘
 ```
 
 - **Un solo codice Flutter**, due app: `lib/main_explore.dart` (pubblica) e `lib/main_yard.dart` (gestione).
   Su Android sono due flavor installabili insieme: `it.sfasciohub.esplora` e `it.sfasciohub.gestione`.
-- **Piattaforma multi-sfasciacarrozze**: chiunque si iscrive crea il proprio piazzale. Le regole di accesso
-  sono nel database ([`supabase/schema.sql`](supabase/schema.sql)), non nell'app.
-- **Modalità demo**: senza chiavi Supabase le app usano dati di esempio salvati sul dispositivo. Nel browser
-  sito e gestione condividono gli stessi dati, così si prova il giro completo.
+- **Backend tuo**: [`server/api/`](server/api/) è PHP puro (8.1+), senza framework né Composer. Database MySQL/MariaDB,
+  password bcrypt, token di sessione, query preparate, foto controllate (solo JPEG/PNG/WebP) e niente PHP eseguibile in `uploads/`.
+- **Piattaforma multi-sfasciacarrozze**: chiunque si iscrive crea il proprio piazzale e può modificare solo i propri veicoli
+  (il controllo è sul server).
+- **Modalità demo**: compilata senza `API_URL`, l'app usa dati di esempio sul dispositivo (è la versione su GitHub Pages).
 
 ```
 lib/
-  data/        modelli, Repository (interfaccia), Supabase e demo
+  data/        modelli, Repository, PhpRepository (server) e DemoRepository
   ui/explore/  sito e app pubblica
   ui/yard/     app di gestione
-  ui/widgets/  mappa dei danni, card, contatti
-supabase/      schema del database e regole di sicurezza
+server/
+  api/         index.php (rotte), install.php (installazione guidata), lib/
+  uploads/     foto (protetta da .htaccess)
+tool/build_deploy.sh   crea il pacchetto da caricare sul server
 ```
 
-## Collegare Supabase (piattaforma vera)
+## Mettere online sul tuo server (Hostinger o qualsiasi hosting PHP)
 
-1. Crea un progetto gratuito su [supabase.com](https://supabase.com).
-2. **SQL Editor** → incolla [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
-3. **Project Settings → API**: copia *Project URL* e la chiave *anon / publishable*.
-4. Compila passando le chiavi:
+1. **hPanel → Database → MySQL**: crea un database e un utente (annota nome, utente e password).
+2. Crea il pacchetto: `tool/build_deploy.sh /` (o `/sfasciohub/` se va in una sottocartella).
+   Esce `build/sfasciohub-server.zip`.
+3. **File Manager**: carica lo zip in `public_html` (o nella sottocartella) ed estrailo.
+4. Apri `https://tuodominio.it/api/install.php`, inserisci i dati del database → **Installa**.
+   La pagina crea le tabelle, salva `api/config.php` e poi si blocca.
+5. Fatto: sito pubblico alla radice, gestione in `/gestione/`.
+
+Per le app Android/Windows collegate al server:
 
 ```bash
-flutter build web -t lib/main_explore.dart --base-href /sfasciohub/ \
-  --dart-define=SUPABASE_URL=https://xxxx.supabase.co --dart-define=SUPABASE_ANON_KEY=...
+flutter build apk --release --flavor gestione -t lib/main_yard.dart   --dart-define=API_URL=https://tuodominio.it/api/ --dart-define=SITE_URL=https://tuodominio.it/
 ```
 
-La chiave *anon* è pubblica per costruzione: la sicurezza la fanno le policy RLS dello schema.
+### API
+
+Tutte le rotte passano da `api/index.php?r=…` (funziona anche senza riscrittura URL).
+
+| Metodo | Rotta | |
+|---|---|---|
+| GET | `/vehicles` `?make=&province=&year_from=&year_to=&yard_id=` | veicoli pubblicati |
+| GET | `/vehicles/{id}` · `/yards` · `/yards/{id}` · `/counts` | pubblico |
+| POST | `/auth/signup` · `/auth/login` · `/auth/logout`, GET `/auth/me` | account (token `Bearer`) |
+| GET/POST/PUT | `/me/yard` | il mio sfasciacarrozze |
+| GET | `/me/vehicles` · PUT/DELETE `/me/vehicles/{id}` | i miei veicoli |
+| POST | `/me/vehicles/{id}/photos?position=` (corpo = immagine) · DELETE `/me/photos/{id}` | foto |
 
 ## Compilare
 
 ```bash
 flutter pub get
-# Android
-flutter build apk --release --flavor explore  -t lib/main_explore.dart
+flutter build apk --release --flavor explore  -t lib/main_explore.dart   # + --dart-define=API_URL=…
 flutter build apk --release --flavor gestione -t lib/main_yard.dart
-# Windows (gestione)
 flutter build windows --release -t lib/main_yard.dart
-# Web: sito alla radice, gestione in /gestione/
-flutter build web -t lib/main_explore.dart --base-href /sfasciohub/ -o build/site
-flutter build web -t lib/main_yard.dart --base-href /sfasciohub/gestione/ -o build/site_gestione
+tool/build_deploy.sh /                                                   # sito + gestione + API
 ```
+
+Test del backend in locale (SQLite invece di MySQL): `php server/api/install.php --sqlite=server/api/test.sqlite --demo`
+e poi `php -S 127.0.0.1:8088 -t server`.
 
 ---
 

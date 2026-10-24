@@ -171,7 +171,7 @@ class VehicleDetails extends StatelessWidget {
               tooltip: 'Copia link',
               icon: const Icon(Icons.share),
               onPressed: () {
-                Clipboard.setData(ClipboardData(text: '${AppConfig.siteUrl}#/veicolo/${v.id}'));
+                Clipboard.setData(ClipboardData(text: '${AppConfig.site}#/veicolo/${v.id}'));
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copiato')));
               },
             ),

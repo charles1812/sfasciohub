@@ -1,0 +1,12 @@
+# Solo immagini: niente script, niente elenco dei file
+Options -Indexes -ExecCGI
+<FilesMatch "\.(php\d?|phtml|phar|cgi|pl|py|sh)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options nosniff
+  Header set Cache-Control "public, max-age=31536000, immutable"
+</IfModule>
