@@ -51,6 +51,7 @@ try {
 
         ['GET', '/admin/overview', fn() => admin_overview()],
         ['GET', '/admin/yards', fn() => admin_yards()],
+        ['GET', '/admin/requests', fn() => admin_requests()],
         ['PUT', '/admin/yards/{id}', fn($id) => admin_update_yard($id)],
         ['GET', '/admin/users', fn() => admin_users()],
         ['POST', '/admin/users', fn() => admin_create_user()],

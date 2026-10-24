@@ -11,7 +11,7 @@ import '../widgets/updater.dart';
 PhpRepository get _repo => Repository.instance as PhpRepository;
 
 /// Dollari: 4 decimali sotto il centesimo, altrimenti 2.
-String usd(num v) => '\$${v < 0.01 && v > 0 ? v.toStringAsFixed(4) : v.toStringAsFixed(2)}';
+String usd(num v) => '\$${v == 0 ? '0' : v < 0.001 ? v.toStringAsFixed(5) : v < 0.01 ? v.toStringAsFixed(4) : v.toStringAsFixed(2)}';
 
 String _date(String? s) {
   if (s == null || s.length < 10) return '—';
@@ -179,6 +179,7 @@ class _AdminHomeState extends State<_AdminHome> {
       _Overview(key: ValueKey('o$_reload')),
       _Users(key: ValueKey('u$_reload')),
       _Yards(key: ValueKey('y$_reload')),
+      _Requests(key: ValueKey('r$_reload')),
     ];
     return Scaffold(
       appBar: AppBar(
@@ -222,6 +223,7 @@ class _AdminHomeState extends State<_AdminHome> {
           NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Panoramica'),
           NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Account'),
           NavigationDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: 'Piazzali'),
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Richieste'),
         ],
       ),
     );
@@ -230,7 +232,7 @@ class _AdminHomeState extends State<_AdminHome> {
 
 /// Carica una rotta e mostra caricamento / errore / contenuto.
 class _Loader extends StatefulWidget {
-  const _Loader({required this.route, required this.builder});
+  const _Loader({super.key, required this.route, required this.builder});
   final String route;
   final Widget Function(BuildContext context, dynamic data, VoidCallback reload) builder;
   @override
@@ -269,6 +271,7 @@ class _Overview extends StatelessWidget {
       route: '/admin/overview',
       builder: (context, d, _) {
         final ai = d['ai'] as Map;
+        final m = (d['month'] as Map?) ?? {};
         final days = (d['days'] as List).cast<Map>();
         final maxCost = days.fold<double>(0, (m, e) => (e['cost_usd'] as num) > m ? (e['cost_usd'] as num).toDouble() : m);
         Widget stat(String label, String value, IconData icon) => Card(
@@ -356,6 +359,37 @@ class _Overview extends StatelessWidget {
                   ]),
                 ),
               ),
+              const SizedBox(height: 8),
+              if (m.isNotEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Questo mese, richiesta per richiesta', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 12),
+                      Wrap(spacing: 28, runSpacing: 14, children: [
+                        for (final (label, value) in [
+                          ('richieste', '${m['requests']}'),
+                          ('errori', '${m['failed']} (${((m['error_rate'] as num) * 100).toStringAsFixed(1)}%)'),
+                          ('tempo medio', m['avg_seconds'] == null ? '—' : '${m['avg_seconds']} s'),
+                          ('tempo massimo', '${m['max_seconds']} s'),
+                          ('costo medio a richiesta', usd(m['avg_cost_request'] as num)),
+                          ('analisi foto, a richiesta', usd(m['avg_cost_photo_request'] as num)),
+                          ('costo per immagine', usd(m['avg_cost_image'] as num)),
+                          ('immagini per analisi', '${m['avg_images']}'),
+                          ('lista ricambi, a richiesta', usd(m['avg_cost_parts'] as num)),
+                        ])
+                          SizedBox(
+                            width: 150,
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(value, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+                              Text(label, style: t.bodySmall),
+                            ]),
+                          ),
+                      ]),
+                    ]),
+                  ),
+                ),
               const SizedBox(height: 8),
               Text('I costi sono calcolati dai token che Anthropic ha contato per ogni analisi (prezzi Haiku 5.5: 0,10 \$ / 0,50 \$ per milione di token).',
                   style: t.bodySmall),
@@ -706,6 +740,115 @@ class _Yards extends StatelessWidget {
           ),
         ],
       )),
+    );
+  }
+}
+
+/// Ogni singola richiesta all'AI: chi, cosa, quante immagini, tempo, costo, esito.
+class _Requests extends StatefulWidget {
+  const _Requests({super.key});
+  @override
+  State<_Requests> createState() => _RequestsState();
+}
+
+class _RequestsState extends State<_Requests> {
+  String _filter = ''; // '', 'photos', 'parts', 'failed'
+
+  String get _route => switch (_filter) {
+        'photos' => '/admin/requests?kind=photos',
+        'parts' => '/admin/requests?kind=parts',
+        'failed' => '/admin/requests?status=failed',
+        _ => '/admin/requests',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+        child: Constrained(
+          maxWidth: 900,
+          child: Wrap(spacing: 8, children: [
+            for (final (k, label) in [('', 'Tutte'), ('photos', 'Analisi foto'), ('parts', 'Lista ricambi'), ('failed', 'Errori')])
+              ChoiceChip(label: Text(label), selected: _filter == k, onSelected: (_) => setState(() => _filter = k)),
+          ]),
+        ),
+      ),
+      Expanded(
+        child: _Loader(
+          key: ValueKey(_route),
+          route: _route,
+          builder: (context, d, _) {
+            final rows = (d as List).cast<Map>();
+            if (rows.isEmpty) {
+              return ListView(children: const [Padding(padding: EdgeInsets.all(32), child: Center(child: Text('Nessuna richiesta.')))]);
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: rows.length,
+              itemBuilder: (context, i) {
+                final r = rows[i];
+                final ok = r['status'] == 'ok';
+                final photos = r['kind'] == 'photos';
+                final at = (r['at'] as String?) ?? '';
+                final vehicle = (r['vehicle'] as String?) ?? '';
+                return Constrained(
+                  maxWidth: 900,
+                  child: Card(
+                    child: ListTile(
+                      onTap: () => _detail(context, r),
+                      leading: CircleAvatar(
+                        backgroundColor: ok ? Brand.orangeSoft : Brand.damageSoft,
+                        child: Icon(ok ? (photos ? Icons.photo_camera : Icons.inventory_2) : Icons.error_outline,
+                            color: ok ? Brand.orange : Brand.damage),
+                      ),
+                      title: Text([photos ? 'Analisi foto' : 'Lista ricambi', if (vehicle.isNotEmpty) vehicle].join(' · '),
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      subtitle: Text([
+                        if (at.length >= 16) '${_date(at)} ${at.substring(11, 16)}',
+                        (r['yard_name'] ?? r['email'] ?? '').toString(),
+                        '${r['images']} foto',
+                        '${r['seconds']} s',
+                        if (!ok) ((r['error'] as String?) ?? '${r['status']}'),
+                      ].where((s) => s.isNotEmpty).join(' · '), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        Text(usd(r['cost_usd'] as num), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                        if (r['cost_per_image_usd'] != null) Text('${usd(r['cost_per_image_usd'] as num)}/foto', style: t.bodySmall),
+                      ]),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    ]);
+  }
+
+  void _detail(BuildContext context, Map r) {
+    final at = (r['at'] as String?) ?? '';
+    final perImage = r['cost_per_image_usd'] == null ? '' : ' (${usd(r['cost_per_image_usd'] as num)} per foto)';
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(r['kind'] == 'photos' ? 'Analisi foto' : 'Lista ricambi'),
+        content: SelectableText([
+          'Quando: ${_date(at)} ${at.length >= 19 ? at.substring(11, 19) : ''} (UTC)',
+          'Piazzale: ${r['yard_name'] ?? '—'}',
+          'Account: ${r['email'] ?? '—'}',
+          if (((r['vehicle'] as String?) ?? '').isNotEmpty) 'Veicolo: ${r['vehicle']}',
+          'Immagini: ${r['images']}',
+          'Tempo di risposta: ${r['seconds']} s',
+          'Token in entrata: ${r['input_tokens']}',
+          'Token in uscita: ${r['output_tokens']}',
+          'Costo: ${usd(r['cost_usd'] as num)}$perImage',
+          'Esito: ${r['status']}',
+          if (((r['error'] as String?) ?? '').isNotEmpty) 'Errore: ${r['error']}',
+        ].join('\n')),
+        actions: [FilledButton(onPressed: () => Navigator.pop(c), child: const Text('Chiudi'))],
+      ),
     );
   }
 }

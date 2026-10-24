@@ -111,7 +111,7 @@ function ai_usage_table_sql(bool $sqlite): string
         )$engine";
 }
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 /**
  * Modifiche allo schema per i server già installati. Ogni versione gira una volta sola
@@ -148,6 +148,14 @@ function migrate_schema(PDO $pdo, bool $sqlite): void
                 FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
             )$engine",
             'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'vehicle_parts_part_idx ON vehicle_parts (part_id, status)',
+        ],
+        4 => [
+            'ALTER TABLE ai_usage ADD COLUMN images INT NOT NULL DEFAULT 0',
+            'ALTER TABLE ai_usage ADD COLUMN duration_ms INT NOT NULL DEFAULT 0',
+            "ALTER TABLE ai_usage ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT 'ok'",
+            "ALTER TABLE ai_usage ADD COLUMN error VARCHAR(200) NOT NULL DEFAULT ''",
+            'ALTER TABLE ai_usage ADD COLUMN vehicle_id CHAR(36) NULL',
+            'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'ai_usage_time_idx ON ai_usage (used_at)',
         ],
     ];
     foreach ($steps as $v => $sqls) {

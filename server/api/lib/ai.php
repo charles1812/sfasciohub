@@ -40,7 +40,8 @@ function ai_cost(int|string $in, int|string $out): float
 function ai_used_today(string $yardId): int
 {
     db()->exec(ai_usage_table_sql(is_sqlite()));
-    $st = db()->prepare('SELECT COUNT(*) FROM ai_usage WHERE yard_id = ? AND used_at >= ?');
+    // le richieste fallite non si contano nel limite
+    $st = db()->prepare("SELECT COUNT(*) FROM ai_usage WHERE yard_id = ? AND used_at >= ? AND status <> 'error'");
     $st->execute([$yardId, gmdate('Y-m-d 00:00:00')]);
     return (int) $st->fetchColumn();
 }
@@ -176,10 +177,8 @@ function ai_analyze(): array
             'content' => [...$images, ['type' => 'text', 'text' => AI_PROMPT]],
         ]],
     ];
-    $res = ai_post($key, $request);
-
-    db()->prepare('INSERT INTO ai_usage (yard_id, user_id, used_at, input_tokens, output_tokens) VALUES (?, ?, ?, ?, ?)')
-        ->execute([$yard['id'], $u['id'], now(), (int) ($res['usage']['input_tokens'] ?? 0), (int) ($res['usage']['output_tokens'] ?? 0)]);
+    $res = ai_run(['yard_id' => $yard['id'], 'user_id' => $u['id'], 'kind' => 'photos', 'images' => count($images),
+        'vehicle_id' => (string) (body()['vehicle_id'] ?? '')], $key, $request);
 
     $stop = $res['stop_reason'] ?? '';
     if ($stop === 'refusal') {
@@ -223,6 +222,42 @@ function ai_analyze(): array
         'confidence' => in_array($r['confidence'] ?? '', ['alta', 'media', 'bassa'], true) ? $r['confidence'] : 'bassa',
         'remaining' => max(0, ai_daily_limit($yard) - ai_used_today($yard['id'])),
     ];
+}
+
+/**
+ * Chiama l'API e registra la richiesta in ai_usage (anche quando fallisce):
+ * immagini, token, tempo di risposta, esito ed eventuale errore. Così l'Admin vede costi e problemi.
+ * @param array{yard_id:string,user_id:string,kind:string,images:int,vehicle_id?:string} $ctx
+ */
+function ai_run(array $ctx, string $key, array $request): array
+{
+    $t0 = microtime(true);
+    $res = null;
+    $status = 'ok';
+    $error = '';
+    try {
+        $res = ai_post($key, $request);
+        $stop = $res['stop_reason'] ?? '';
+        if ($stop === 'refusal' || $stop === 'max_tokens') {
+            $status = $stop === 'refusal' ? 'refused' : 'truncated';
+            $error = $stop === 'refusal' ? 'Rifiutata dal filtro di sicurezza' : 'Risposta troncata (max_tokens)';
+        }
+        return $res;
+    } catch (HttpError $e) {
+        $status = 'error';
+        $error = $e->getMessage();
+        throw $e;
+    } finally {
+        try {
+            db()->prepare('INSERT INTO ai_usage (yard_id, user_id, used_at, input_tokens, output_tokens, kind, images, duration_ms, status, error, vehicle_id)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                ->execute([$ctx['yard_id'], $ctx['user_id'], now(), (int) ($res['usage']['input_tokens'] ?? 0), (int) ($res['usage']['output_tokens'] ?? 0),
+                    $ctx['kind'], $ctx['images'], (int) round((microtime(true) - $t0) * 1000), $status, mb_substr($error, 0, 200),
+                    ($ctx['vehicle_id'] ?? '') ?: null]);
+        } catch (Throwable $e) {
+            error_log('[sfasciohub] registro AI: ' . $e->getMessage());
+        }
+    }
 }
 
 function ai_post(string $key, array $request): array

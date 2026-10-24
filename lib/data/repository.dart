@@ -86,7 +86,7 @@ abstract class Repository extends ChangeNotifier {
   Future<int?> aiRemaining();
 
   /// Manda le foto (nuove e/o già salvate) all'AI e ritorna i dati riconosciuti.
-  Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const []});
+  Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const [], String? vehicleId});
 
   // ---- lista ricambi ----
   Future<List<VehiclePart>> parts(Vehicle v);

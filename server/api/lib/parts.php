@@ -5,7 +5,8 @@ declare(strict_types=1);
 const PART_STATUSES = ['ok', 'damaged', 'check'];
 
 /**
- * I ricambi che uno sfasciacarrozze vende davvero (niente viteria), divisi per zona della mappa dei danni.
+ * I ricambi che uno sfasciacarrozze vende davvero (niente viteria e niente pneumatici, che di norma non si rivendono),
+ * divisi per zona della mappa dei danni.
  * Chiave = id stabile; l'AI aggiunge il nome preciso per il modello (es. "Faro full LED").
  */
 const PART_CATALOG = [
@@ -18,14 +19,14 @@ const PART_CATALOG = [
     ],
     'front_left' => [
         'faro_ant_sx' => 'Faro anteriore sinistro', 'fendinebbia_sx' => 'Fendinebbia sinistro', 'parafango_ant_sx' => 'Parafango anteriore sinistro',
-        'passaruota_ant_sx' => 'Passaruota anteriore sinistro', 'cerchio_ant_sx' => 'Cerchio anteriore sinistro', 'gomma_ant_sx' => 'Pneumatico anteriore sinistro',
+        'passaruota_ant_sx' => 'Passaruota anteriore sinistro', 'cerchio_ant_sx' => 'Cerchio anteriore sinistro',
         'ammortizzatore_ant_sx' => 'Ammortizzatore anteriore sinistro', 'fusello_ant_sx' => 'Fusello / mozzo anteriore sinistro',
         'braccio_ant_sx' => 'Braccio oscillante anteriore sinistro', 'semiasse_ant_sx' => 'Semiasse anteriore sinistro',
         'pinza_ant_sx' => 'Pinza freno anteriore sinistra', 'disco_ant_sx' => 'Disco freno anteriore sinistro',
     ],
     'front_right' => [
         'faro_ant_dx' => 'Faro anteriore destro', 'fendinebbia_dx' => 'Fendinebbia destro', 'parafango_ant_dx' => 'Parafango anteriore destro',
-        'passaruota_ant_dx' => 'Passaruota anteriore destro', 'cerchio_ant_dx' => 'Cerchio anteriore destro', 'gomma_ant_dx' => 'Pneumatico anteriore destro',
+        'passaruota_ant_dx' => 'Passaruota anteriore destro', 'cerchio_ant_dx' => 'Cerchio anteriore destro',
         'ammortizzatore_ant_dx' => 'Ammortizzatore anteriore destro', 'fusello_ant_dx' => 'Fusello / mozzo anteriore destro',
         'braccio_ant_dx' => 'Braccio oscillante anteriore destro', 'semiasse_ant_dx' => 'Semiasse anteriore destro',
         'pinza_ant_dx' => 'Pinza freno anteriore destra', 'disco_ant_dx' => 'Disco freno anteriore destro',
@@ -46,13 +47,13 @@ const PART_CATALOG = [
     ],
     'rear_left' => [
         'fanale_post_sx' => 'Fanale posteriore sinistro', 'fiancata_post_sx' => 'Fiancata / parafango posteriore sinistro',
-        'cerchio_post_sx' => 'Cerchio posteriore sinistro', 'gomma_post_sx' => 'Pneumatico posteriore sinistro',
+        'cerchio_post_sx' => 'Cerchio posteriore sinistro',
         'ammortizzatore_post_sx' => 'Ammortizzatore posteriore sinistro', 'freno_post_sx' => 'Freno posteriore sinistro (pinza/tamburo)',
         'sportello_carburante' => 'Sportello carburante',
     ],
     'rear_right' => [
         'fanale_post_dx' => 'Fanale posteriore destro', 'fiancata_post_dx' => 'Fiancata / parafango posteriore destro',
-        'cerchio_post_dx' => 'Cerchio posteriore destro', 'gomma_post_dx' => 'Pneumatico posteriore destro',
+        'cerchio_post_dx' => 'Cerchio posteriore destro',
         'ammortizzatore_post_dx' => 'Ammortizzatore posteriore destro', 'freno_post_dx' => 'Freno posteriore destro (pinza/tamburo)',
     ],
     'rear' => [
@@ -112,7 +113,8 @@ function parts_of(string $vehicleId): array
     $st = db()->prepare('SELECT part_id, name, zone, status, confirmed, note FROM vehicle_parts WHERE vehicle_id = ?');
     $st->execute([$vehicleId]);
     $order = array_flip(array_keys(part_index()));
-    $rows = $st->fetchAll();
+    // pezzi tolti dall'elenco (es. pneumatici) non si mostrano più
+    $rows = array_values(array_filter($st->fetchAll(), fn($r) => isset($order[$r['part_id']])));
     usort($rows, fn($a, $b) => ($order[$a['part_id']] ?? 9999) <=> ($order[$b['part_id']] ?? 9999));
     return array_map(fn($r) => [
         'id' => $r['part_id'],
@@ -200,8 +202,11 @@ Elenco base dei ricambi (id: nome), diviso per zona:
 $catalog
 Regole:
 - Includi solo i pezzi che questo modello ha davvero (es. niente tetto apribile o turbina se il modello/allestimento non li prevede di serie; se è possibile che ci siano, includili come "check"). Niente pezzi fuori elenco.
-- status: "ok" = probabilmente sano e recuperabile; "damaged" = sicuramente o molto probabilmente rovinato; "check" = da verificare (vicino all'urto, airbag esplosi, meccanica dopo un frontale forte, ecc.).
+- status: "ok" = probabilmente sano e recuperabile; "damaged" = sicuramente o molto probabilmente rovinato; "check" = da verificare.
+- Prudenza: un pezzo che si trova in una zona danneggiata o subito accanto all'urto NON è mai "ok" (al massimo "check"), anche se dalle foto sembra intatto: chiusure, staffe, sensori e cablaggi vicini all'urto vanno verificati. Nel dubbio scegli "check": chi compra deve potersi fidare degli "ok".
 - Ragiona come un perito: un frontale forte rovina spesso radiatore, condensatore, traversa ed elettroventola; se sono esplosi gli airbag, airbag e centralina airbag vanno "damaged" e cruscotto e cinture "check".
+- Includi sempre gli airbag (volante, passeggero, laterali/tendina) e la centralina airbag: tutte le auto recenti li hanno. Dopo un urto frontale o laterale serio, airbag e centralina sono almeno "check".
+- Includi tutti gli interni che il modello ha (divano posteriore, cappelliera nelle berline/hatchback, ecc.).
 - name: il nome preciso per questo modello quando aggiunge informazione utile a chi compra (es. "Faro anteriore sinistro full LED", "Cambio manuale 5 marce"), altrimenti stringa vuota.
 TXT;
 }
@@ -226,7 +231,7 @@ function generate_my_parts(string $vehicleId): array
     $ids = array_column($st->fetchAll(), 'id');
     $images = $ids ? ai_images(['photo_ids' => $ids], $yard) : [];
 
-    $res = ai_post($key, [
+    $res = ai_run(['yard_id' => $yard['id'], 'user_id' => $u['id'], 'kind' => 'parts', 'images' => count($images), 'vehicle_id' => $vehicleId], $key, [
         'model' => AI_MODEL,
         'max_tokens' => 12000,
         'output_config' => [
@@ -238,8 +243,6 @@ function generate_my_parts(string $vehicleId): array
             'content' => [...$images, ['type' => 'text', 'text' => parts_prompt($v)]],
         ]],
     ]);
-    db()->prepare("INSERT INTO ai_usage (yard_id, user_id, used_at, input_tokens, output_tokens, kind) VALUES (?, ?, ?, ?, ?, 'parts')")
-        ->execute([$yard['id'], $u['id'], now(), (int) ($res['usage']['input_tokens'] ?? 0), (int) ($res['usage']['output_tokens'] ?? 0)]);
 
     $stop = $res['stop_reason'] ?? '';
     if ($stop === 'refusal' || $stop === 'max_tokens') {
@@ -267,6 +270,7 @@ function generate_my_parts(string $vehicleId): array
     $pdo->prepare('DELETE FROM vehicle_parts WHERE vehicle_id = ? AND confirmed = 0')->execute([$vehicleId]);
     $ins = $pdo->prepare('INSERT INTO vehicle_parts (vehicle_id, part_id, name, zone, status, confirmed, note, updated_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?)');
     $seen = [];
+    $damaged = array_flip(array_filter(explode(',', (string) $v['damage_zones'])));
     foreach ($r['parts'] as $p) {
         $id = (string) ($p['id'] ?? '');
         if (!isset($idx[$id]) || isset($seen[$id]) || isset($confirmed[$id]) || !in_array($p['status'] ?? '', PART_STATUSES, true)) {
@@ -274,7 +278,9 @@ function generate_my_parts(string $vehicleId): array
         }
         $seen[$id] = true;
         $name = mb_substr(trim((string) ($p['name'] ?? '')), 0, 120) ?: $idx[$id]['name'];
-        $ins->execute([$vehicleId, $id, $name, $idx[$id]['zone'], $p['status'], '', now()]);
+        // nelle zone segnate come danneggiate niente "sano": al massimo da verificare
+        $status = $p['status'] === 'ok' && isset($damaged[$idx[$id]['zone']]) ? 'check' : $p['status'];
+        $ins->execute([$vehicleId, $id, $name, $idx[$id]['zone'], $status, '', now()]);
     }
     $pdo->prepare('UPDATE vehicles SET updated_at = ? WHERE id = ?')->execute([now(), $vehicleId]);
     $pdo->commit();

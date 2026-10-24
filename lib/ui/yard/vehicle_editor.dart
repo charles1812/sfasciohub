@@ -68,6 +68,7 @@ class _VehicleEditorState extends State<VehicleEditor> {
       final r = await Repository.instance.analyzePhotos(
         images: [for (final p in shots) if (p is _PendingPhoto) p.bytes],
         photoIds: [for (final p in shots) if (p is VehiclePhoto) p.id],
+        vehicleId: _v.id,
       );
       if (!mounted) return;
       void put(TextEditingController c, String value) {

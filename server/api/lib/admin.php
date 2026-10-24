@@ -54,6 +54,39 @@ function admin_overview(): array
     $totals['cost_month_usd'] = round($totals['cost_month_usd'], 4);
     unset($totals['last_used']);
 
+    // medie del mese: tempo di risposta, errori, costo per richiesta e per immagine
+    $st = db()->prepare("SELECT COUNT(*) n,
+                                SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) ok,
+                                SUM(CASE WHEN status <> 'ok' THEN 1 ELSE 0 END) failed,
+                                AVG(CASE WHEN status = 'ok' THEN duration_ms END) avg_ms,
+                                MAX(duration_ms) max_ms,
+                                SUM(images) images,
+                                SUM(input_tokens) i, SUM(output_tokens) o,
+                                SUM(CASE WHEN kind = 'photos' THEN 1 ELSE 0 END) n_photos,
+                                SUM(CASE WHEN kind = 'photos' THEN images ELSE 0 END) img_photos,
+                                SUM(CASE WHEN kind = 'photos' THEN input_tokens ELSE 0 END) i_photos,
+                                SUM(CASE WHEN kind = 'photos' THEN output_tokens ELSE 0 END) o_photos,
+                                SUM(CASE WHEN kind = 'parts' THEN 1 ELSE 0 END) n_parts,
+                                SUM(CASE WHEN kind = 'parts' THEN input_tokens ELSE 0 END) i_parts,
+                                SUM(CASE WHEN kind = 'parts' THEN output_tokens ELSE 0 END) o_parts
+                         FROM ai_usage WHERE used_at >= ?");
+    $st->execute([month_start()]);
+    $m = $st->fetch();
+    $n = (int) $m['n'];
+    $photosCost = ai_cost($m['i_photos'] ?? 0, $m['o_photos'] ?? 0);
+    $stats = [
+        'requests' => $n,
+        'failed' => (int) $m['failed'],
+        'error_rate' => $n ? round($m['failed'] / $n, 3) : 0,
+        'avg_seconds' => $m['avg_ms'] === null ? null : round($m['avg_ms'] / 1000, 1),
+        'max_seconds' => round(((int) $m['max_ms']) / 1000, 1),
+        'avg_cost_request' => $n ? round(ai_cost($m['i'] ?? 0, $m['o'] ?? 0) / $n, 5) : 0,
+        'avg_cost_photo_request' => $m['n_photos'] ? round($photosCost / $m['n_photos'], 5) : 0,
+        'avg_cost_image' => $m['img_photos'] ? round($photosCost / $m['img_photos'], 5) : 0,
+        'avg_images' => $m['n_photos'] ? round($m['img_photos'] / $m['n_photos'], 1) : 0,
+        'avg_cost_parts' => $m['n_parts'] ? round(ai_cost($m['i_parts'] ?? 0, $m['o_parts'] ?? 0) / $m['n_parts'], 5) : 0,
+    ];
+
     // ultimi 30 giorni, per il grafico
     $st = db()->prepare('SELECT SUBSTR(used_at, 1, 10) d, COUNT(*) n, SUM(input_tokens) i, SUM(output_tokens) o
                          FROM ai_usage WHERE used_at >= ? GROUP BY SUBSTR(used_at, 1, 10) ORDER BY d');
@@ -67,7 +100,52 @@ function admin_overview(): array
         'photos' => $count('SELECT COUNT(*) FROM vehicle_photos'),
         'ai' => $totals + ['enabled' => ai_key() !== '', 'default_daily_limit' => (int) (config()['ai_daily_limit'] ?? AI_DAILY_LIMIT)],
         'days' => $days,
+        'month' => $stats,
     ];
+}
+
+/** Elenco delle singole richieste all'AI, le più recenti prima. Filtri: yard_id, kind, status=failed. */
+function admin_requests(): array
+{
+    require_admin();
+    $where = ['1 = 1'];
+    $args = [];
+    if (($y = (string) ($_GET['yard_id'] ?? '')) !== '') {
+        $where[] = 'a.yard_id = ?';
+        $args[] = $y;
+    }
+    if (in_array($k = (string) ($_GET['kind'] ?? ''), ['photos', 'parts'], true)) {
+        $where[] = 'a.kind = ?';
+        $args[] = $k;
+    }
+    if (($_GET['status'] ?? '') === 'failed') {
+        $where[] = "a.status <> 'ok'";
+    }
+    $limit = max(1, min(500, (int) ($_GET['limit'] ?? 200)));
+    $st = db()->prepare('SELECT a.*, y.name yard_name, u.email, v.make, v.model
+                         FROM ai_usage a LEFT JOIN yards y ON y.id = a.yard_id LEFT JOIN users u ON u.id = a.user_id
+                         LEFT JOIN vehicles v ON v.id = a.vehicle_id
+                         WHERE ' . implode(' AND ', $where) . " ORDER BY a.used_at DESC LIMIT $limit");
+    $st->execute($args);
+    return array_map(function ($r) {
+        $cost = ai_cost($r['input_tokens'], $r['output_tokens']);
+        $images = (int) $r['images'];
+        return [
+            'at' => $r['used_at'],
+            'kind' => $r['kind'],
+            'yard_name' => $r['yard_name'],
+            'email' => $r['email'],
+            'vehicle' => trim(($r['make'] ?? '') . ' ' . ($r['model'] ?? '')),
+            'images' => $images,
+            'input_tokens' => (int) $r['input_tokens'],
+            'output_tokens' => (int) $r['output_tokens'],
+            'cost_usd' => $cost,
+            'cost_per_image_usd' => $images ? round($cost / $images, 5) : null,
+            'seconds' => round(((int) $r['duration_ms']) / 1000, 1),
+            'status' => $r['status'],
+            'error' => $r['error'],
+        ];
+    }, $st->fetchAll());
 }
 
 function admin_yards(): array

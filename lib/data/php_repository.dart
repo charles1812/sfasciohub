@@ -202,8 +202,11 @@ class PhpRepository extends Repository {
       _call('PUT', '/me/vehicles/${v.id}/photos/order', json: {'order': photoIds});
 
   // ---- app Admin ----
-  /// Chiamata diretta all'API (le rotte /admin/* servono solo all'app Admin).
-  Future<dynamic> request(String method, String route, {Object? json}) => _call(method, route, json: json);
+  /// Chiamata diretta all'API (le rotte /admin/* servono solo all'app Admin). Accetta "/rotta?filtro=valore".
+  Future<dynamic> request(String method, String route, {Object? json}) {
+    final u = Uri.parse(route);
+    return _call(method, u.path, json: json, query: u.queryParameters.isEmpty ? null : u.queryParameters);
+  }
 
   Future<bool> isAdmin() async {
     final me = await _call('GET', '/auth/me') as Map<String, dynamic>;
@@ -221,9 +224,9 @@ class PhpRepository extends Repository {
   }
 
   @override
-  Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const []}) async =>
+  Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const [], String? vehicleId}) async =>
       AiResult.fromJson(await _call('POST', '/me/ai/analyze',
-          json: {'images': images.map(base64Encode).toList(), 'photo_ids': photoIds},
+          json: {'images': images.map(base64Encode).toList(), 'photo_ids': photoIds, 'vehicle_id': ?vehicleId},
           timeout: const Duration(seconds: 100)) as Map<String, dynamic>);
 
   List<VehiclePart> _parts(dynamic r) =>

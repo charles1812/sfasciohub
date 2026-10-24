@@ -318,7 +318,7 @@ class DemoRepository extends Repository {
   Future<int?> aiRemaining() async => null;
 
   @override
-  Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const []}) =>
+  Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const [], String? vehicleId}) =>
       throw RepoException('Il riconoscimento dalle foto funziona solo con il server.');
 
   @override
