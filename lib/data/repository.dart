@@ -18,6 +18,28 @@ class RepoException implements Exception {
   String toString() => message;
 }
 
+/// Cosa ha riconosciuto l'AI nelle foto. Campi vuoti = non riconosciuto.
+class AiResult {
+  AiResult.fromJson(Map<String, dynamic> j)
+      : make = j['make'] as String? ?? '',
+        model = j['model'] as String? ?? '',
+        version = j['version'] as String? ?? '',
+        year = (j['year'] as num?)?.toInt(),
+        yearRange = j['year_range'] as String? ?? '',
+        fuel = j['fuel'] as String? ?? '',
+        color = j['color'] as String? ?? '',
+        damage = ((j['damage'] as List?) ?? []).map((k) => DamageZone.fromKey(k as String)).whereType<DamageZone>().toSet(),
+        notes = j['notes'] as String? ?? '',
+        confidence = j['confidence'] as String? ?? 'bassa',
+        remaining = (j['remaining'] as num?)?.toInt();
+  final String make, model, version, yearRange, fuel, color, notes, confidence;
+  final int? year;
+  final Set<DamageZone> damage;
+
+  /// Analisi ancora disponibili oggi per questo sfasciacarrozze.
+  final int? remaining;
+}
+
 /// Tutto ciò che l'app sa fare con i dati. Due implementazioni: l'API PHP sul
 /// server (piattaforma vera, condivisa) e demo (dati di esempio sul dispositivo).
 abstract class Repository extends ChangeNotifier {
@@ -58,4 +80,11 @@ abstract class Repository extends ChangeNotifier {
 
   /// Nuovo ordine delle foto già salvate (la prima è la copertina).
   Future<void> reorderPhotos(Vehicle v, List<String> photoIds);
+
+  // ---- riconoscimento dalle foto ----
+  /// Analisi rimaste oggi, o null se il server non ha il riconoscimento attivo.
+  Future<int?> aiRemaining();
+
+  /// Manda le foto (nuove e/o già salvate) all'AI e ritorna i dati riconosciuti.
+  Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const []});
 }

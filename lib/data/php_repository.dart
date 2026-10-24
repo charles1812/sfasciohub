@@ -50,7 +50,8 @@ class PhpRepository extends Repository {
   }
 
   Future<dynamic> _call(String method, String route,
-      {Object? json, Uint8List? bytes, String? contentType, Map<String, String>? query}) async {
+      {Object? json, Uint8List? bytes, String? contentType, Map<String, String>? query,
+      Duration timeout = const Duration(seconds: 40)}) async {
     final req = http.Request(method, _uri(route, query));
     if (_token != null) {
       req.headers['Authorization'] = 'Bearer $_token';
@@ -65,7 +66,7 @@ class PhpRepository extends Repository {
     }
     final http.Response res;
     try {
-      res = await http.Response.fromStream(await _client.send(req).timeout(const Duration(seconds: 40)));
+      res = await http.Response.fromStream(await _client.send(req).timeout(timeout));
     } catch (_) {
       throw RepoException('Server non raggiungibile. Controlla la connessione e riprova.');
     }
@@ -199,6 +200,22 @@ class PhpRepository extends Repository {
   @override
   Future<void> reorderPhotos(Vehicle v, List<String> photoIds) async =>
       _call('PUT', '/me/vehicles/${v.id}/photos/order', json: {'order': photoIds});
+
+  @override
+  Future<int?> aiRemaining() async {
+    try {
+      final r = await _call('GET', '/me/ai') as Map<String, dynamic>;
+      return r['enabled'] == true ? (r['remaining'] as num).toInt() : null;
+    } on RepoException {
+      return null; // server vecchio senza riconoscimento
+    }
+  }
+
+  @override
+  Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const []}) async =>
+      AiResult.fromJson(await _call('POST', '/me/ai/analyze',
+          json: {'images': images.map(base64Encode).toList(), 'photo_ids': photoIds},
+          timeout: const Duration(seconds: 100)) as Map<String, dynamic>);
 
   @override
   void dispose() {

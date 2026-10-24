@@ -7,6 +7,8 @@ declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
 require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/handlers.php';
+require __DIR__ . '/lib/schema.php';
+require __DIR__ . '/lib/ai.php';
 
 try {
     cors();
@@ -39,6 +41,8 @@ try {
         ['POST', '/me/vehicles/{id}/photos', fn($id) => add_photo($id)],
         ['PUT', '/me/vehicles/{id}/photos/order', fn($id) => reorder_photos($id)],
         ['DELETE', '/me/photos/{id}', fn($id) => delete_photo($id)],
+        ['GET', '/me/ai', fn() => ai_status()],
+        ['POST', '/me/ai/analyze', fn() => ai_analyze()],
     ];
 
     $knownPath = false;

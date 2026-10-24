@@ -32,6 +32,8 @@ function schema_statements(bool $sqlite): array
             attempted_at $dt NOT NULL
         )$engine",
 
+        ai_usage_table_sql($sqlite),
+
         "CREATE TABLE IF NOT EXISTS yards (
             id $id,
             owner_id CHAR(36) NOT NULL,
@@ -93,6 +95,20 @@ function schema_statements(bool $sqlite): array
             FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
         )$engine",
     ];
+}
+
+/** Una riga per ogni analisi delle foto con l'AI (limite giornaliero e costi). */
+function ai_usage_table_sql(bool $sqlite): string
+{
+    $engine = $sqlite ? '' : ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+    $dt = $sqlite ? 'TEXT' : 'DATETIME';
+    return "CREATE TABLE IF NOT EXISTS ai_usage (
+            yard_id CHAR(36) NOT NULL,
+            user_id CHAR(36) NOT NULL,
+            used_at $dt NOT NULL,
+            input_tokens INTEGER NOT NULL DEFAULT 0,
+            output_tokens INTEGER NOT NULL DEFAULT 0
+        )$engine";
 }
 
 function create_schema(PDO $pdo, bool $sqlite): void

@@ -24,6 +24,8 @@ in quale sfasciacarrozze c'è l'auto giusta e quali parti sono integre.
 - Marca con autocompletamento, modello, versione, anno, alimentazione, km, colore, codice motore.
 - **Mappa dei danni**: l'auto vista dall'alto, tocchi le zone incidentate (frontale, fiancate, tetto, vetri, motore, interni…).
 - Stato *Disponibile / Riservato / Demolito-venduto* e interruttore "visibile sul sito".
+- **Compila dalle foto (AI)**: Claude Haiku guarda le foto e riempie marca, modello, anno, alimentazione, colore e zone danneggiate. Si controlla e si salva.
+- **Aggiornamenti dall'app** (Android): quando esce una versione nuova compare la barra *Aggiorna*, che scarica e installa l'APK.
 - Anteprima della scheda pubblica, dati del piazzale (indirizzo, orari, telefono, WhatsApp).
 
 **Sito e app pubblica**
@@ -72,6 +74,11 @@ tool/build_deploy.sh   crea il pacchetto da caricare sul server
 4. Apri `https://tuodominio.it/api/install.php`, inserisci i dati del database → **Installa**.
    La pagina crea le tabelle, salva `api/config.php` e poi si blocca.
 5. Fatto: sito pubblico alla radice, gestione in `/gestione/`.
+6. *(facoltativo)* Riconoscimento dalle foto: crea una chiave su [platform.claude.com](https://platform.claude.com) e salvala in
+   `api/ai_key.php` (vedi `api/ai_key.example.php`). Costa circa 0,1 centesimi per auto; massimo 40 analisi al giorno per piazzale.
+
+> Il File Manager di Hostinger, estraendo uno zip, **non sovrascrive** i file già presenti: per un aggiornamento
+> cancella prima i vecchi `api/index.php` e `api/lib/`, oppure caricali singolarmente.
 
 Per le app Android/Windows collegate al server:
 
@@ -91,6 +98,7 @@ Tutte le rotte passano da `api/index.php?r=…` (funziona anche senza riscrittur
 | GET/POST/PUT | `/me/yard` | il mio sfasciacarrozze |
 | GET | `/me/vehicles` · PUT/DELETE `/me/vehicles/{id}` | i miei veicoli |
 | POST | `/me/vehicles/{id}/photos?position=` (corpo = immagine) · DELETE `/me/photos/{id}` | foto |
+| GET | `/me/ai` · POST `/me/ai/analyze` `{images: [base64], photo_ids: []}` | riconoscimento dalle foto |
 
 ## Compilare
 

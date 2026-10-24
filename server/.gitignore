@@ -1,4 +1,5 @@
 api/config.php
+api/ai_key.php
 api/*.sqlite
 uploads/*
 !uploads/.htaccess

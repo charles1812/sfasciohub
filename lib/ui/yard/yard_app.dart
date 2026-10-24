@@ -6,6 +6,7 @@ import '../../data/models.dart';
 import '../../data/repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/updater.dart';
 import 'vehicle_editor.dart';
 import 'yard_profile.dart';
 
@@ -20,6 +21,7 @@ class YardApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
+      builder: (_, child) => UpdateGate(child: child!),
       home: ListenableBuilder(
         listenable: Repository.instance,
         builder: (_, _) => Repository.instance.currentUser == null ? const AuthPage() : const _YardGate(),
@@ -231,9 +233,19 @@ class _YardHomeState extends State<YardHome> {
             onPressed: () => openUrl('${AppConfig.site}#/sfasciacarrozze/${widget.yard.id}'),
           ),
           PopupMenuButton<String>(
-            onSelected: (v) { if (v == 'out') Repository.instance.signOut(); },
+            onSelected: (v) async {
+              if (v == 'out') Repository.instance.signOut();
+              if (v == 'update') {
+                final messenger = ScaffoldMessenger.of(context);
+                if (!await Updater.instance.check()) {
+                  messenger.showSnackBar(const SnackBar(content: Text("Hai già l'ultima versione.")));
+                }
+              }
+            },
             itemBuilder: (_) => [
               PopupMenuItem(enabled: false, child: Text(Repository.instance.currentUser?.email ?? '')),
+              if (Updater.supported)
+                const PopupMenuItem(value: 'update', child: ListTile(leading: Icon(Icons.system_update), title: Text('Cerca aggiornamenti'))),
               const PopupMenuItem(value: 'out', child: ListTile(leading: Icon(Icons.logout), title: Text('Esci'))),
             ],
           ),

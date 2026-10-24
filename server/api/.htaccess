@@ -9,6 +9,6 @@ SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 Options -Indexes
 
 # configurazione e database locali non accessibili dal web
-<FilesMatch "^(config\.php|.*\.sqlite)$">
+<FilesMatch "^(config\.php|ai_key\.php|.*\.sqlite)$">
   Require all denied
 </FilesMatch>

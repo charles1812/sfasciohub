@@ -312,4 +312,12 @@ class DemoRepository extends Repository {
     _session = null;
     _save();
   }
+
+  // Nella demo offline non c'è un server che possa chiamare l'AI.
+  @override
+  Future<int?> aiRemaining() async => null;
+
+  @override
+  Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const []}) =>
+      throw RepoException('Il riconoscimento dalle foto funziona solo con il server.');
 }

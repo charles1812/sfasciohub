@@ -5,6 +5,7 @@ import '../../data/models.dart';
 import '../../data/repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/updater.dart';
 import 'vehicle_page.dart';
 import 'yard_page.dart';
 
@@ -19,6 +20,7 @@ class ExploreApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
+      builder: (_, child) => UpdateGate(child: child!),
       onGenerateRoute: (settings) {
         final parts = Uri.parse(settings.name ?? '/').pathSegments;
         Widget page = const ExploreHome();

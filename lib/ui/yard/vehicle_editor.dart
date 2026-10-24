@@ -44,6 +44,54 @@ class _VehicleEditorState extends State<VehicleEditor> {
   bool _busy = false;
   bool get _isNew => widget.vehicle == null;
 
+  /// Analisi AI rimaste oggi; null = riconoscimento non disponibile.
+  int? _aiRemaining;
+  bool _aiBusy = false;
+  AiResult? _ai;
+  TextEditingController? _makeField; // il campo visibile dell'autocompletamento
+  int _aiRun = 0; // cambia la chiave dei campi a valore iniziale (alimentazione)
+
+  @override
+  void initState() {
+    super.initState();
+    Repository.instance.aiRemaining().then((n) {
+      if (mounted) setState(() => _aiRemaining = n);
+    });
+  }
+
+  Future<void> _analyze() async {
+    final shots = _photos.take(5).toList();
+    setState(() => _aiBusy = true);
+    try {
+      final r = await Repository.instance.analyzePhotos(
+        images: [for (final p in shots) if (p is _PendingPhoto) p.bytes],
+        photoIds: [for (final p in shots) if (p is VehiclePhoto) p.id],
+      );
+      if (!mounted) return;
+      void put(TextEditingController c, String value) {
+        if (value.isNotEmpty) c.text = value;
+      }
+      setState(() {
+        put(_make, r.make);
+        if (_makeField != null) put(_makeField!, r.make);
+        put(_model, r.model);
+        put(_version, r.version);
+        if (r.year != null) _year.text = '${r.year}';
+        put(_color, r.color);
+        if (r.fuel.isNotEmpty) _v.fuel = r.fuel;
+        _v.damage = {...r.damage};
+        if (_notes.text.trim().isEmpty) _notes.text = r.notes;
+        _ai = r;
+        _aiRemaining = r.remaining ?? _aiRemaining;
+        _aiRun++;
+      });
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _aiBusy = false);
+    }
+  }
+
   Future<void> _addPhotos(ImageSource source) async {
     final picker = ImagePicker();
     try {
@@ -210,6 +258,41 @@ class _VehicleEditorState extends State<VehicleEditor> {
       const SizedBox(height: 6),
       Text('Tieni premuto e trascina per cambiare ordine. La prima è la copertina. Consigliate: davanti, dietro, i due lati, il motore.',
           style: t.bodySmall),
+      if (_aiRemaining != null) ...[
+        const SizedBox(height: 12),
+        FilledButton.tonalIcon(
+          onPressed: _photos.isEmpty || _aiBusy || _busy || _aiRemaining == 0 ? null : _analyze,
+          icon: _aiBusy
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.auto_awesome),
+          label: Text(_aiBusy
+              ? 'Sto guardando le foto…'
+              : _photos.isEmpty
+                  ? 'Aggiungi le foto per compilare in automatico'
+                  : _aiRemaining == 0
+                      ? 'Analisi di oggi esaurite'
+                      : 'Compila dalle foto (marca, modello, anno, danni)'),
+        ),
+        if (_ai case final r?) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Brand.orangeSoft.withValues(alpha: .6), borderRadius: BorderRadius.circular(12)),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.auto_awesome, color: Brand.orange, size: 20),
+              const SizedBox(width: 10),
+              Expanded(child: Text(
+                [
+                  'Compilato dalle foto (affidabilità ${r.confidence}).',
+                  if (r.yearRange.isNotEmpty) 'Serie: ${r.yearRange}.',
+                  'Controlla i dati e la mappa dei danni prima di salvare.',
+                ].join(' '),
+                style: t.bodySmall,
+              )),
+            ]),
+          ),
+        ],
+      ],
     ]));
 
     final data = _section('Dati del veicolo', Column(children: [
@@ -222,7 +305,10 @@ class _VehicleEditorState extends State<VehicleEditor> {
                 : commonMakes.where((m) => m.toLowerCase().startsWith(v.text.toLowerCase())),
             onSelected: (m) => _make.text = m,
             fieldViewBuilder: (context, ctrl, focus, onSubmit) {
-              ctrl.addListener(() => _make.text = ctrl.text);
+              if (_makeField != ctrl) {
+                _makeField = ctrl;
+                ctrl.addListener(() => _make.text = ctrl.text);
+              }
               return TextFormField(
                 controller: ctrl,
                 focusNode: focus,
@@ -258,6 +344,7 @@ class _VehicleEditorState extends State<VehicleEditor> {
         )),
         const SizedBox(width: 12),
         Expanded(child: DropdownButtonFormField<String>(
+          key: ValueKey('fuel$_aiRun'),
           initialValue: _v.fuel,
           decoration: const InputDecoration(labelText: 'Alimentazione'),
           items: [for (final e in fuels.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
