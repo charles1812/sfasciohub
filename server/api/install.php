@@ -31,6 +31,7 @@ function install(array $db, bool $demo, array $cors): void
 {
     $pdo = connect($db);
     create_schema($pdo, ($db['driver'] ?? 'mysql') === 'sqlite');
+    @unlink(__DIR__ . '/schema.flag');
     @unlink(__DIR__ . '/schema_v2.flag');
     migrate_schema($pdo, ($db['driver'] ?? 'mysql') === 'sqlite');
     if ($demo) {

@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import 'parts_page.dart';
+
 import '../../data/models.dart';
 import '../../data/repository.dart';
 import '../explore/vehicle_page.dart';
@@ -138,9 +140,15 @@ class _VehicleEditorState extends State<VehicleEditor> {
       }
       final order = [for (final p in _photos) (p as VehiclePhoto).id];
       if (order.isNotEmpty) await repo.reorderPhotos(saved, order);
+      // auto nuova: la lista ricambi si prepara da sola mentre si continua a lavorare
+      final autoParts = _isNew && (_aiRemaining ?? 0) > 0;
+      if (autoParts) repo.generateParts(saved).ignore();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(_v.published ? '${_v.title} è online' : '${_v.title} salvato (non pubblicato)'),
+        content: Text([
+          _v.published ? '${_v.title} è online.' : '${_v.title} salvato (non pubblicato).',
+          if (autoParts) 'La lista ricambi si prepara in automatico.',
+        ].join(' ')),
         behavior: SnackBarBehavior.floating,
       ));
       Navigator.of(context).pop(true);
@@ -384,6 +392,18 @@ class _VehicleEditorState extends State<VehicleEditor> {
       }),
     ));
 
+    final parts = _isNew
+        ? const SizedBox.shrink()
+        : _section('Ricambi', Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text("Lista dei pezzi probabilmente sani, danneggiati o da verificare. La prepara l'AI, tu confermi.", style: t.bodySmall),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PartsPage(vehicle: _v))),
+              icon: const Icon(Icons.inventory_2_outlined),
+              label: const Text('Apri la lista ricambi'),
+            ),
+          ]));
+
     final notes = _section('Note e stato', Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       TextFormField(
         controller: _notes,
@@ -426,9 +446,9 @@ class _VehicleEditorState extends State<VehicleEditor> {
                   ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Expanded(child: Column(children: [photos, data, notes])),
                       const SizedBox(width: 16),
-                      SizedBox(width: 380, child: damage),
+                      SizedBox(width: 380, child: Column(children: [damage, parts])),
                     ])
-                  : Column(children: [photos, data, damage, notes]),
+                  : Column(children: [photos, data, damage, parts, notes]),
             ),
           ]),
         ),

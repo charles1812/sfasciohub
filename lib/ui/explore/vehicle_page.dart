@@ -77,7 +77,7 @@ class VehicleDetails extends StatelessWidget {
       ),
     );
 
-    final parts = Card(
+    final parts = v.parts.isNotEmpty ? _PartsList(parts: v.parts) : Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -288,5 +288,63 @@ class _GalleryState extends State<_Gallery> {
         ),
       ),
     ));
+  }
+}
+
+/// Ricambi della lista del piazzale: prima i sani, poi quelli da verificare.
+class _PartsList extends StatefulWidget {
+  const _PartsList({required this.parts});
+  final List<VehiclePart> parts;
+  @override
+  State<_PartsList> createState() => _PartsListState();
+}
+
+class _PartsListState extends State<_PartsList> {
+  bool _all = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final ok = widget.parts.where((p) => p.status == PartStatus.ok).toList();
+    final check = widget.parts.where((p) => p.status == PartStatus.check).toList();
+    final shown = _all ? [...ok, ...check] : ok.take(12).toList();
+    final byZone = <DamageZone?, List<VehiclePart>>{};
+    for (final p in shown) {
+      byZone.putIfAbsent(p.zone, () => []).add(p);
+    }
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Ricambi disponibili', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text('${ok.length} probabilmente sani${check.isEmpty ? '' : ' · ${check.length} da verificare'}. Chiama per conferma prima di andare.',
+              style: t.bodySmall),
+          for (final MapEntry(key: zone, value: list) in byZone.entries) ...[
+            const SizedBox(height: 12),
+            Text(zone?.label ?? 'Altro', style: t.labelLarge?.copyWith(color: Brand.orange)),
+            const SizedBox(height: 4),
+            for (final p in list)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(p.status == PartStatus.ok ? Icons.check_circle : Icons.help_outline,
+                      color: p.status == PartStatus.ok ? Brand.ok : Brand.orange, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(p.name)),
+                  if (p.confirmed) Text('verificato', style: t.bodySmall?.copyWith(color: Brand.ok)),
+                ]),
+              ),
+          ],
+          if (ok.length > 12 || check.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => setState(() => _all = !_all),
+              child: Text(_all ? 'Mostra meno' : 'Mostra tutti (${ok.length + check.length})'),
+            ),
+          ],
+        ]),
+      ),
+    );
   }
 }

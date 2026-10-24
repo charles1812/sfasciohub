@@ -111,31 +111,60 @@ function ai_usage_table_sql(bool $sqlite): string
         )$engine";
 }
 
+const SCHEMA_VERSION = 3;
+
 /**
- * Modifiche allo schema per i server già installati. Gira una volta sola
- * (poi lascia api/schema_v2.flag) e ignora le colonne già presenti.
+ * Modifiche allo schema per i server già installati. Ogni versione gira una volta sola
+ * (il numero raggiunto resta in api/schema.flag); colonne e indici già presenti si ignorano.
  */
 function migrate_schema(PDO $pdo, bool $sqlite): void
 {
-    $flag = __DIR__ . '/../schema_v2.flag';
-    if (is_file($flag)) {
+    $flag = __DIR__ . '/../schema.flag';
+    $version = is_file($flag) ? (int) file_get_contents($flag) : (is_file(__DIR__ . '/../schema_v2.flag') ? 2 : 1);
+    if ($version >= SCHEMA_VERSION) {
         return;
     }
     $bool = $sqlite ? 'INTEGER' : 'TINYINT(1)';
-    $pdo->exec(ai_usage_table_sql($sqlite));
-    foreach ([
-        "ALTER TABLE users ADD COLUMN disabled $bool NOT NULL DEFAULT 0",
-        'ALTER TABLE yards ADD COLUMN ai_daily_limit INT NULL',
-    ] as $sql) {
-        try {
-            $pdo->exec($sql);
-        } catch (PDOException $e) {
-            if (!preg_match('/duplicate column/i', $e->getMessage())) {
-                throw $e;
+    $engine = $sqlite ? '' : ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+    $dt = $sqlite ? 'TEXT' : 'DATETIME';
+    $steps = [
+        2 => [
+            ai_usage_table_sql($sqlite),
+            "ALTER TABLE users ADD COLUMN disabled $bool NOT NULL DEFAULT 0",
+            'ALTER TABLE yards ADD COLUMN ai_daily_limit INT NULL',
+        ],
+        3 => [
+            "ALTER TABLE ai_usage ADD COLUMN kind VARCHAR(12) NOT NULL DEFAULT 'photos'",
+            "CREATE TABLE IF NOT EXISTS vehicle_parts (
+                vehicle_id CHAR(36) NOT NULL,
+                part_id VARCHAR(40) NOT NULL,
+                name VARCHAR(120) NOT NULL,
+                zone VARCHAR(12) NOT NULL,
+                status VARCHAR(8) NOT NULL,
+                confirmed $bool NOT NULL DEFAULT 0,
+                note VARCHAR(200) NOT NULL DEFAULT '',
+                updated_at $dt NOT NULL,
+                PRIMARY KEY (vehicle_id, part_id),
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
+            )$engine",
+            'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'vehicle_parts_part_idx ON vehicle_parts (part_id, status)',
+        ],
+    ];
+    foreach ($steps as $v => $sqls) {
+        if ($v <= $version) {
+            continue;
+        }
+        foreach ($sqls as $sql) {
+            try {
+                $pdo->exec($sql);
+            } catch (PDOException $e) {
+                if (!preg_match('/duplicate (column|key name)/i', $e->getMessage())) {
+                    throw $e;
+                }
             }
         }
     }
-    @file_put_contents($flag, "2\n");
+    @file_put_contents($flag, SCHEMA_VERSION . "\n");
 }
 
 function create_schema(PDO $pdo, bool $sqlite): void

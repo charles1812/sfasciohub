@@ -10,6 +10,7 @@ require __DIR__ . '/lib/handlers.php';
 require __DIR__ . '/lib/schema.php';
 require __DIR__ . '/lib/ai.php';
 require __DIR__ . '/lib/admin.php';
+require __DIR__ . '/lib/parts.php';
 
 try {
     cors();
@@ -42,6 +43,9 @@ try {
         ['POST', '/me/vehicles/{id}/photos', fn($id) => add_photo($id)],
         ['PUT', '/me/vehicles/{id}/photos/order', fn($id) => reorder_photos($id)],
         ['DELETE', '/me/photos/{id}', fn($id) => delete_photo($id)],
+        ['GET', '/me/vehicles/{id}/parts', fn($id) => my_parts($id)],
+        ['PUT', '/me/vehicles/{id}/parts', fn($id) => update_my_parts($id)],
+        ['POST', '/me/vehicles/{id}/parts/generate', fn($id) => generate_my_parts($id)],
         ['GET', '/me/ai', fn() => ai_status()],
         ['POST', '/me/ai/analyze', fn() => ai_analyze()],
 

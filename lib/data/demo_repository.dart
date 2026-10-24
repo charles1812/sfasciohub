@@ -320,4 +320,14 @@ class DemoRepository extends Repository {
   @override
   Future<AiResult> analyzePhotos({List<Uint8List> images = const [], List<String> photoIds = const []}) =>
       throw RepoException('Il riconoscimento dalle foto funziona solo con il server.');
+
+  @override
+  Future<List<VehiclePart>> parts(Vehicle v) async => [];
+
+  @override
+  Future<List<VehiclePart>> generateParts(Vehicle v) =>
+      throw RepoException("La lista ricambi con l'AI funziona solo con il server.");
+
+  @override
+  Future<List<VehiclePart>> updateParts(Vehicle v, List<VehiclePart> changed) async => changed;
 }

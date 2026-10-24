@@ -27,6 +27,40 @@ enum DamageZone {
   }
 }
 
+/// Stato di un ricambio nella lista del veicolo.
+enum PartStatus {
+  ok('ok', 'Sano'),
+  check('check', 'Da verificare'),
+  damaged('damaged', 'Danneggiato');
+
+  const PartStatus(this.key, this.label);
+  final String key;
+  final String label;
+
+  static PartStatus fromKey(String? k) => values.firstWhere((s) => s.key == k, orElse: () => check);
+
+  /// Tocco sul pezzo: sano → danneggiato → da verificare → sano.
+  PartStatus get next => switch (this) { ok => damaged, damaged => check, check => ok };
+}
+
+/// Un ricambio del veicolo: proposto dall'AI, confermato o corretto dal piazzale.
+class VehiclePart {
+  VehiclePart({required this.id, required this.name, required this.zone, required this.status, this.confirmed = false});
+  final String id;
+  final String name;
+  final DamageZone? zone;
+  PartStatus status;
+  bool confirmed;
+
+  factory VehiclePart.fromJson(Map<String, dynamic> j) => VehiclePart(
+        id: j['id'] as String,
+        name: j['name'] as String,
+        zone: DamageZone.fromKey(j['zone'] as String? ?? ''),
+        status: PartStatus.fromKey(j['status'] as String?),
+        confirmed: j['confirmed'] == true,
+      );
+}
+
 enum VehicleStatus {
   available('available', 'Disponibile'),
   reserved('reserved', 'Riservato'),
@@ -156,7 +190,9 @@ class Vehicle {
     DateTime? arrivedOn,
     List<VehiclePhoto>? photos,
     this.yard,
+    List<VehiclePart>? parts,
   })  : damage = damage ?? {},
+        parts = parts ?? [],
         arrivedOn = arrivedOn ?? DateTime.now(),
         photos = photos ?? [];
 
@@ -176,6 +212,9 @@ class Vehicle {
   bool published;
   DateTime arrivedOn;
   List<VehiclePhoto> photos;
+
+  /// Lista dei ricambi (solo nella scheda singola, se è stata generata).
+  List<VehiclePart> parts;
 
   /// Lo sfasciacarrozze, quando caricato insieme al veicolo.
   Yard? yard;
@@ -208,6 +247,7 @@ class Vehicle {
         arrivedOn: arrivedOn,
         photos: [...photos],
         yard: yard,
+        parts: [...parts],
       );
 
   factory Vehicle.fromJson(Map<String, dynamic> j, {String Function(String path)? photoUrl}) {
@@ -238,6 +278,7 @@ class Vehicle {
       arrivedOn: DateTime.tryParse((j['arrived_on'] ?? '') as String),
       photos: photos,
       yard: j['yards'] is Map<String, dynamic> ? Yard.fromJson(j['yards'] as Map<String, dynamic>) : null,
+      parts: ((j['parts'] as List?) ?? []).map((p) => VehiclePart.fromJson(p as Map<String, dynamic>)).toList(),
     );
   }
 

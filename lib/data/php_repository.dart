@@ -226,6 +226,20 @@ class PhpRepository extends Repository {
           json: {'images': images.map(base64Encode).toList(), 'photo_ids': photoIds},
           timeout: const Duration(seconds: 100)) as Map<String, dynamic>);
 
+  List<VehiclePart> _parts(dynamic r) =>
+      ((r as Map)['parts'] as List).map((p) => VehiclePart.fromJson(p as Map<String, dynamic>)).toList();
+
+  @override
+  Future<List<VehiclePart>> parts(Vehicle v) async => _parts(await _call('GET', '/me/vehicles/${v.id}/parts'));
+
+  @override
+  Future<List<VehiclePart>> generateParts(Vehicle v) async =>
+      _parts(await _call('POST', '/me/vehicles/${v.id}/parts/generate', timeout: const Duration(seconds: 120)));
+
+  @override
+  Future<List<VehiclePart>> updateParts(Vehicle v, List<VehiclePart> changed) async => _parts(await _call(
+      'PUT', '/me/vehicles/${v.id}/parts', json: {'parts': [for (final p in changed) {'id': p.id, 'status': p.status.key}]}));
+
   @override
   void dispose() {
     _client.close();

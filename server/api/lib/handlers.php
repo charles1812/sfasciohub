@@ -127,7 +127,8 @@ function public_vehicle(string $id): array
     if (!$v) {
         throw new HttpError(404, 'Questo veicolo non è più disponibile.');
     }
-    return vehicles_out([$v])[0];
+    // la scheda singola porta anche la lista dei ricambi (se generata)
+    return vehicles_out([$v])[0] + ['parts' => function_exists('parts_of') ? parts_of($id) : []];
 }
 
 function public_yards(): array
