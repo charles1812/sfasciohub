@@ -244,6 +244,15 @@ class PhpRepository extends Repository {
       'PUT', '/me/vehicles/${v.id}/parts', json: {'parts': [for (final p in changed) {'id': p.id, 'status': p.status.key}]}));
 
   @override
+  void track(String kind, {String? vehicleId, String? yardId, String? partId}) {
+    _call('POST', '/events', json: {'kind': kind, 'vehicle_id': ?vehicleId, 'yard_id': ?yardId, 'part_id': ?partId}).ignore();
+  }
+
+  @override
+  Future<Map<String, dynamic>> myStats({int days = 30}) async =>
+      await _call('GET', '/me/stats', query: {'days': '$days'}) as Map<String, dynamic>;
+
+  @override
   void dispose() {
     _client.close();
     super.dispose();

@@ -96,4 +96,12 @@ abstract class Repository extends ChangeNotifier {
 
   /// Il piazzale conferma o corregge alcuni pezzi.
   Future<List<VehiclePart>> updateParts(Vehicle v, List<VehiclePart> changed);
+
+  // ---- statistiche ----
+  /// Lato clienti: segnala una visita ("view", "yard_view"), un contatto ("call", "whatsapp", "maps")
+  /// o un ricambio richiesto ("part"). Non blocca mai l'interfaccia e ignora gli errori.
+  void track(String kind, {String? vehicleId, String? yardId, String? partId});
+
+  /// Lato piazzale: visite, contatti e ricambi richiesti negli ultimi [days] giorni.
+  Future<Map<String, dynamic>> myStats({int days = 30});
 }

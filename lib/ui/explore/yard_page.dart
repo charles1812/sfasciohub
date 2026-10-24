@@ -14,7 +14,10 @@ class YardPage extends StatefulWidget {
 }
 
 class _YardPageState extends State<YardPage> {
-  late final Future<Yard?> _yard = Repository.instance.yard(widget.id);
+  late final Future<Yard?> _yard = Repository.instance.yard(widget.id).then((y) {
+    if (y != null) Repository.instance.track('yard_view', yardId: y.id);
+    return y;
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -11,6 +11,7 @@ require __DIR__ . '/lib/schema.php';
 require __DIR__ . '/lib/ai.php';
 require __DIR__ . '/lib/admin.php';
 require __DIR__ . '/lib/parts.php';
+require __DIR__ . '/lib/events.php';
 
 try {
     cors();
@@ -28,6 +29,7 @@ try {
         ['GET', '/yards', fn() => public_yards()],
         ['GET', '/yards/{id}', fn($id) => public_yard($id)],
         ['GET', '/counts', fn() => public_counts()],
+        ['POST', '/events', fn() => track_event()],
 
         ['POST', '/auth/signup', fn() => auth_signup()],
         ['POST', '/auth/login', fn() => auth_login()],
@@ -46,6 +48,7 @@ try {
         ['GET', '/me/vehicles/{id}/parts', fn($id) => my_parts($id)],
         ['PUT', '/me/vehicles/{id}/parts', fn($id) => update_my_parts($id)],
         ['POST', '/me/vehicles/{id}/parts/generate', fn($id) => generate_my_parts($id)],
+        ['GET', '/me/stats', fn() => my_stats()],
         ['GET', '/me/ai', fn() => ai_status()],
         ['POST', '/me/ai/analyze', fn() => ai_analyze()],
 

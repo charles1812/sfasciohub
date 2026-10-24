@@ -7,6 +7,7 @@ import '../../data/repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/updater.dart';
+import 'stats_tab.dart';
 import 'vehicle_editor.dart';
 import 'yard_profile.dart';
 
@@ -206,6 +207,7 @@ class YardHome extends StatefulWidget {
 class _YardHomeState extends State<YardHome> {
   int _tab = 0;
   final _vehiclesKey = GlobalKey<_VehiclesTabState>();
+  final _statsKey = GlobalKey<StatsTabState>();
 
   Future<void> _newVehicle() async {
     final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
@@ -220,12 +222,34 @@ class _YardHomeState extends State<YardHome> {
     final wide = MediaQuery.sizeOf(context).width >= 840;
     final body = IndexedStack(index: _tab, children: [
       VehiclesTab(key: _vehiclesKey, yard: widget.yard),
+      StatsTab(key: _statsKey),
       YardProfilePage(yard: widget.yard, onSaved: widget.onYardChanged),
     ]);
-    const dests = [(Icons.directions_car_outlined, Icons.directions_car, 'Veicoli'), (Icons.storefront_outlined, Icons.storefront, 'Il mio piazzale')];
+    const dests = [
+      (Icons.directions_car_outlined, Icons.directions_car, 'Veicoli'),
+      (Icons.insights_outlined, Icons.insights, 'Dati'),
+      (Icons.storefront_outlined, Icons.storefront, 'Il mio piazzale'),
+    ];
+    void select(int i) {
+      setState(() => _tab = i);
+      if (i == 1) _statsKey.currentState?.reload();
+    }
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.yard.name, overflow: TextOverflow.ellipsis),
+        title: Row(children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: Brand.orange, borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.car_repair, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(widget.yard.name, overflow: TextOverflow.ellipsis),
+            const Text('SfascioHub Gestione', style: TextStyle(fontSize: 11.5, color: Colors.white60, fontWeight: FontWeight.w600)),
+          ])),
+        ]),
         actions: [
           IconButton(
             tooltip: 'Vedi sul sito pubblico',
@@ -258,7 +282,7 @@ class _YardHomeState extends State<YardHome> {
               ? Row(children: [
                   NavigationRail(
                     selectedIndex: _tab,
-                    onDestinationSelected: (i) => setState(() => _tab = i),
+                    onDestinationSelected: select,
                     labelType: NavigationRailLabelType.all,
                     leading: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -281,7 +305,7 @@ class _YardHomeState extends State<YardHome> {
           ? null
           : NavigationBar(
               selectedIndex: _tab,
-              onDestinationSelected: (i) => setState(() => _tab = i),
+              onDestinationSelected: select,
               destinations: [for (final d in dests) NavigationDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: d.$3)],
             ),
     );
@@ -337,12 +361,24 @@ class _VehiclesTabState extends State<VehiclesTab> {
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), children: [
         Constrained(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Wrap(spacing: 10, runSpacing: 10, children: [
-              _stat('${all.length}', 'nel piazzale'),
-              _stat('${count[VehicleStatus.available]}', 'disponibili', color: Brand.ok),
-              _stat('${count[VehicleStatus.reserved]}', 'riservati', color: Brand.orange),
-              _stat('${all.where((v) => v.photos.isEmpty).length}', 'senza foto', color: Brand.damage),
-            ]),
+            GridView.count(
+              crossAxisCount: width >= 700 ? 4 : 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: width >= 700 ? 2 : 1.6,
+              children: [
+                StatTile(icon: Icons.directions_car, color: Brand.asphaltSoft, value: '${all.length}', label: 'nel piazzale',
+                    onTap: () => setState(() => _status = null)),
+                StatTile(icon: Icons.check_circle_outline, color: Brand.ok, value: '${count[VehicleStatus.available]}', label: 'disponibili',
+                    onTap: () => setState(() => _status = VehicleStatus.available)),
+                StatTile(icon: Icons.bookmark_outline, color: Brand.orange, value: '${count[VehicleStatus.reserved]}', label: 'riservati',
+                    onTap: () => setState(() => _status = VehicleStatus.reserved)),
+                StatTile(icon: Icons.no_photography_outlined, color: Brand.damage, value: '${all.where((v) => v.photos.isEmpty).length}',
+                    label: 'senza foto'),
+              ],
+            ),
             const SizedBox(height: 14),
             TextField(
               controller: _query,
@@ -386,14 +422,4 @@ class _VehiclesTabState extends State<VehiclesTab> {
   }
 
   bool width840(BuildContext c) => MediaQuery.sizeOf(c).width >= 840;
-
-  Widget _stat(String n, String label, {Color? color}) => Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(n, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: color)),
-            Text(label, style: const TextStyle(fontSize: 12.5)),
-          ]),
-        ),
-      );
 }

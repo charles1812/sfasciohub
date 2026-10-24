@@ -111,7 +111,7 @@ function ai_usage_table_sql(bool $sqlite): string
         )$engine";
 }
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 /**
  * Modifiche allo schema per i server già installati. Ogni versione gira una volta sola
@@ -156,6 +156,19 @@ function migrate_schema(PDO $pdo, bool $sqlite): void
             "ALTER TABLE ai_usage ADD COLUMN error VARCHAR(200) NOT NULL DEFAULT ''",
             'ALTER TABLE ai_usage ADD COLUMN vehicle_id CHAR(36) NULL',
             'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'ai_usage_time_idx ON ai_usage (used_at)',
+        ],
+        5 => [
+            'CREATE TABLE IF NOT EXISTS events (
+                id ' . ($sqlite ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'BIGINT AUTO_INCREMENT PRIMARY KEY') . ",
+                yard_id CHAR(36) NOT NULL,
+                vehicle_id CHAR(36) NULL,
+                kind VARCHAR(12) NOT NULL,
+                part_id VARCHAR(40) NULL,
+                visitor CHAR(16) NOT NULL,
+                created_at $dt NOT NULL
+            )$engine",
+            'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'events_yard_idx ON events (yard_id, created_at)',
+            'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'events_visitor_idx ON events (visitor, created_at)',
         ],
     ];
     foreach ($steps as $v => $sqls) {

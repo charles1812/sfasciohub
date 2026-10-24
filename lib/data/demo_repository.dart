@@ -330,4 +330,18 @@ class DemoRepository extends Repository {
 
   @override
   Future<List<VehiclePart>> updateParts(Vehicle v, List<VehiclePart> changed) async => changed;
+
+  @override
+  void track(String kind, {String? vehicleId, String? yardId, String? partId}) {}
+
+  @override
+  Future<Map<String, dynamic>> myStats({int days = 30}) async => {
+        'days': days,
+        'totals': <String, dynamic>{},
+        'previous': <String, dynamic>{},
+        'series': <dynamic>[],
+        'vehicles': <dynamic>[],
+        'parts': <dynamic>[],
+        'demo': true,
+      };
 }

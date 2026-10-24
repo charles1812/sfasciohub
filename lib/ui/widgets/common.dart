@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/models.dart';
+import '../../data/repository.dart';
 import '../theme.dart';
 
 /// Foto da URL o da `data:` URI (modalità demo).
@@ -177,7 +178,30 @@ class VehicleCard extends StatelessWidget {
             aspectRatio: 16 / 10,
             child: Stack(fit: StackFit.expand, children: [
               Hero(tag: 'cover-${vehicle.id}', child: VehicleCover(vehicle: vehicle)),
+              if (vehicle.photos.isNotEmpty)
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.transparent, Color(0x99000000)],
+                        stops: [0, .55, 1],
+                      ),
+                    ),
+                  ),
+                ),
               Positioned(left: 10, top: 10, child: StatusPill(vehicle.status)),
+              if (vehicle.year != null)
+                Positioned(
+                  left: 10,
+                  bottom: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                    decoration: BoxDecoration(color: Brand.asphalt.withValues(alpha: .85), borderRadius: BorderRadius.circular(8)),
+                    child: Text('${vehicle.year}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12.5)),
+                  ),
+                ),
               if (vehicle.photos.length > 1)
                 Positioned(
                   right: 10,
@@ -236,16 +260,23 @@ class ContactButtons extends StatelessWidget {
     final text = vehicle == null
         ? 'Buongiorno, vi contatto da SfascioHub.'
         : 'Buongiorno, ho visto su SfascioHub la ${vehicle!.title} ${vehicle!.year ?? ''}. Vorrei informazioni su un ricambio:';
+    void track(String kind) => Repository.instance.track(kind, vehicleId: vehicle?.id, yardId: vehicle == null ? yard.id : null);
     return Wrap(spacing: 10, runSpacing: 10, children: [
       if (yard.phone.isNotEmpty)
         FilledButton.icon(
-          onPressed: () => launchUrl(Uri(scheme: 'tel', path: yard.phone.replaceAll(' ', ''))),
+          onPressed: () {
+            track('call');
+            launchUrl(Uri(scheme: 'tel', path: yard.phone.replaceAll(' ', '')));
+          },
           icon: const Icon(Icons.call),
           label: const Text('Chiama'),
         ),
       if (digits.isNotEmpty)
         FilledButton.tonalIcon(
-          onPressed: () => launchUrl(Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent(text)}'), mode: LaunchMode.externalApplication),
+          onPressed: () {
+            track('whatsapp');
+            launchUrl(Uri.parse('https://wa.me/$digits?text=${Uri.encodeComponent(text)}'), mode: LaunchMode.externalApplication);
+          },
           icon: const Icon(Icons.chat),
           label: const Text('WhatsApp'),
         ),
@@ -253,6 +284,7 @@ class ContactButtons extends StatelessWidget {
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16)),
           onPressed: () {
+            track('maps');
             final q = yard.lat != null ? '${yard.lat},${yard.lng}' : '${yard.address}, ${yard.city}';
             launchUrl(Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(q)}'), mode: LaunchMode.externalApplication);
           },
@@ -300,4 +332,55 @@ class Constrained extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       Center(heightFactor: 1, child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child));
+}
+
+/// Riquadro con un numero importante: icona colorata, valore, etichetta e (se c'è) la variazione.
+class StatTile extends StatelessWidget {
+  const StatTile({super.key, required this.icon, required this.value, required this.label, this.color = Brand.orange, this.delta, this.onTap});
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  /// Variazione rispetto al periodo precedente (0.25 = +25%).
+  final double? delta;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final d = delta;
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: color.withValues(alpha: .13), borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const Spacer(),
+              if (d != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(color: (d >= 0 ? Brand.ok : Brand.damage).withValues(alpha: .12), borderRadius: BorderRadius.circular(100)),
+                  child: Text('${d >= 0 ? '▲' : '▼'} ${(d.abs() * 100).round()}%',
+                      style: TextStyle(color: d >= 0 ? Brand.ok : Brand.damage, fontWeight: FontWeight.w800, fontSize: 11.5)),
+                ),
+            ]),
+            const SizedBox(height: 8),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(value, style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: color, height: 1.05)),
+            ),
+            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      ),
+    );
+  }
 }

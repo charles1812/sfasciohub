@@ -162,35 +162,96 @@ class _SearchTabState extends State<SearchTab> {
     final width = MediaQuery.sizeOf(context).width;
     final cols = width >= 1200 ? 4 : width >= 860 ? 3 : width >= 560 ? 2 : 1;
 
+    final search = TextField(
+      controller: _query,
+      onChanged: (_) => _apply(),
+      textInputAction: TextInputAction.search,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        hintText: 'Marca, modello, codice motore… (es. "panda 2016")',
+        prefixIcon: const Icon(Icons.search, color: Brand.orange),
+        suffixIcon: _query.text.isEmpty
+            ? null
+            : IconButton(icon: const Icon(Icons.close), onPressed: () { _query.clear(); _apply(); }),
+      ),
+    );
+    final yards = {for (final v in _all!) v.yardId}.length;
+
     return RefreshIndicator(
       onRefresh: _load,
       child: CustomScrollView(slivers: [
+        if (widget.yardId == null)
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: Brand.heroGradient,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+              ),
+              child: Constrained(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, width >= 700 ? 36 : 22, 20, 24),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: Brand.orange.withValues(alpha: .18), borderRadius: BorderRadius.circular(100)),
+                      child: Text('${_all!.length} auto in $yards ${yards == 1 ? 'piazzale' : 'piazzali'}',
+                          style: const TextStyle(color: Color(0xFFFFB98C), fontWeight: FontWeight.w800, fontSize: 12.5)),
+                    ),
+                    const SizedBox(height: 12),
+                    Text('Trova il ricambio\nnel piazzale giusto',
+                        style: TextStyle(color: Colors.white, fontSize: width >= 700 ? 38 : 28, fontWeight: FontWeight.w900, height: 1.1, letterSpacing: -.5)),
+                    const SizedBox(height: 8),
+                    const Text('Le auto presenti oggi negli sfasciacarrozze, con i pezzi ancora sani da recuperare.',
+                        style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4)),
+                    const SizedBox(height: 18),
+                    search,
+                    const SizedBox(height: 14),
+                    const Text('Mi serve…', style: TextStyle(color: Colors.white60, fontWeight: FontWeight.w700, fontSize: 12.5)),
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(children: [
+                        for (final (z, icon) in [
+                          (DamageZone.front, Icons.light_mode_outlined),
+                          (DamageZone.rear, Icons.flip_to_back),
+                          (DamageZone.left, Icons.sensor_door_outlined),
+                          (DamageZone.right, Icons.sensor_door_outlined),
+                          (DamageZone.engine, Icons.settings_outlined),
+                          (DamageZone.interior, Icons.event_seat_outlined),
+                          (DamageZone.glass, Icons.window_outlined),
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Material(
+                              color: _need == z ? Brand.orange : Colors.white.withValues(alpha: .09),
+                              shape: StadiumBorder(side: BorderSide(color: _need == z ? Brand.orange : Colors.white24)),
+                              child: InkWell(
+                                customBorder: const StadiumBorder(),
+                                onTap: () { _need = _need == z ? null : z; _apply(); },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                    Icon(icon, size: 17, color: _need == z ? Colors.white : const Color(0xFFFFB98C)),
+                                    const SizedBox(width: 6),
+                                    Text(z.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5)),
+                                  ]),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ]),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
         SliverToBoxAdapter(
           child: Constrained(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                if (widget.yardId == null) ...[
-                  Text('Trova il ricambio nel piazzale giusto',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 4),
-                  Text('Le auto presenti oggi negli sfasciacarrozze, con le zone integre da cui recuperare i pezzi.',
-                      style: Theme.of(context).textTheme.bodyMedium),
-                  const SizedBox(height: 14),
-                ],
-                TextField(
-                  controller: _query,
-                  onChanged: (_) => _apply(),
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: 'Marca, modello, codice motore… (es. "panda 2016")',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _query.text.isEmpty
-                        ? null
-                        : IconButton(icon: const Icon(Icons.close), onPressed: () { _query.clear(); _apply(); }),
-                  ),
-                ),
-                const SizedBox(height: 10),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                if (widget.yardId != null) ...[search, const SizedBox(height: 10)],
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(children: [
@@ -214,7 +275,7 @@ class _SearchTabState extends State<SearchTab> {
                 Text(
                   '${_shown.length} ${_shown.length == 1 ? 'veicolo' : 'veicoli'}'
                   '${_need == null ? '' : ' con ${_need!.label.toLowerCase()} integro · ${_need!.parts}'}',
-                  style: Theme.of(context).textTheme.labelLarge,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ]),
             ),
@@ -341,18 +402,38 @@ class _YardsTabState extends State<YardsTab> {
                 const SizedBox(height: 12),
                 for (final y in yards) ...[
                   Card(
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      leading: CircleAvatar(
-                        backgroundColor: Brand.asphalt,
-                        foregroundColor: Brand.orange,
-                        child: Text(y.name.characters.first.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w900)),
-                      ),
-                      title: Text(y.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      subtitle: Text('${y.place}\n${counts[y.id] ?? 0} veicoli disponibili'),
-                      isThreeLine: true,
-                      trailing: const Icon(Icons.chevron_right),
+                    child: InkWell(
                       onTap: () => Navigator.of(context).pushNamed('/sfasciacarrozze/${y.id}'),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(children: [
+                          Container(
+                            width: 54,
+                            height: 54,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(gradient: Brand.heroGradient, borderRadius: BorderRadius.circular(16)),
+                            child: Text(y.name.characters.first.toUpperCase(),
+                                style: const TextStyle(color: Brand.orange, fontWeight: FontWeight.w900, fontSize: 22)),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(y.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                            const SizedBox(height: 2),
+                            Row(children: [
+                              const Icon(Icons.place_outlined, size: 15, color: Brand.orange),
+                              const SizedBox(width: 3),
+                              Expanded(child: Text(y.place, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall)),
+                            ]),
+                          ])),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(color: Brand.okSoft, borderRadius: BorderRadius.circular(100)),
+                            child: Text('${counts[y.id] ?? 0} auto', style: const TextStyle(color: Brand.ok, fontWeight: FontWeight.w800)),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right),
+                        ]),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),

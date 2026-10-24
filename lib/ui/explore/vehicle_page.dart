@@ -16,7 +16,10 @@ class VehiclePage extends StatefulWidget {
 }
 
 class _VehiclePageState extends State<VehiclePage> {
-  late final Future<Vehicle?> _vehicle = Repository.instance.vehicle(widget.id);
+  late final Future<Vehicle?> _vehicle = Repository.instance.vehicle(widget.id).then((v) {
+    if (v != null) Repository.instance.track('view', vehicleId: v.id);
+    return v;
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +80,7 @@ class VehicleDetails extends StatelessWidget {
       ),
     );
 
-    final parts = v.parts.isNotEmpty ? _PartsList(parts: v.parts) : Card(
+    final parts = v.parts.isNotEmpty ? _PartsList(vehicle: v, preview: preview) : Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -293,14 +296,31 @@ class _GalleryState extends State<_Gallery> {
 
 /// Ricambi della lista del piazzale: prima i sani, poi quelli da verificare.
 class _PartsList extends StatefulWidget {
-  const _PartsList({required this.parts});
-  final List<VehiclePart> parts;
+  const _PartsList({required this.vehicle, this.preview = false});
+  final Vehicle vehicle;
+  final bool preview;
+  List<VehiclePart> get parts => vehicle.parts;
   @override
   State<_PartsList> createState() => _PartsListState();
 }
 
 class _PartsListState extends State<_PartsList> {
   bool _all = false;
+
+  /// Il cliente chiede un pezzo: si conta nelle statistiche del piazzale e si apre WhatsApp (o il telefono).
+  void _ask(VehiclePart p) {
+    final v = widget.vehicle;
+    final y = v.yard!;
+    Repository.instance.track('part', vehicleId: v.id, partId: p.id);
+    final text = 'Buongiorno, ho visto su SfascioHub la ${v.title}${v.year == null ? '' : ' ${v.year}'}. '
+        'Avete ancora: ${p.name}? Quanto costa?';
+    final digits = y.whatsapp.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isNotEmpty) {
+      openUrl('https://wa.me/$digits?text=${Uri.encodeComponent(text)}');
+    } else if (y.phone.isNotEmpty) {
+      openUrl('tel:${y.phone.replaceAll(' ', '')}');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -333,6 +353,12 @@ class _PartsListState extends State<_PartsList> {
                   const SizedBox(width: 8),
                   Expanded(child: Text(p.name)),
                   if (p.confirmed) Text('verificato', style: t.bodySmall?.copyWith(color: Brand.ok)),
+                  if (!widget.preview && widget.vehicle.yard != null)
+                    TextButton(
+                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 10)),
+                      onPressed: () => _ask(p),
+                      child: const Text('Chiedi'),
+                    ),
                 ]),
               ),
           ],
