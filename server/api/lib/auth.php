@@ -32,12 +32,32 @@ function current_user(): ?array
         $token = request_token();
         if ($token !== null) {
             $st = db()->prepare('SELECT u.id, u.email, u.is_admin FROM auth_tokens t JOIN users u ON u.id = t.user_id
-                                 WHERE t.token_hash = ? AND t.expires_at > ?');
+                                 WHERE t.token_hash = ? AND t.expires_at > ? AND u.disabled = 0');
             $st->execute([hash('sha256', $token), now()]);
             $user = $st->fetch() ?: null;
+            if ($user) {
+                $user['is_admin'] = (int) ($user['is_admin'] || in_array($user['email'], admin_emails(), true));
+            }
         }
     }
     return $user;
+}
+
+/** Email degli amministratori scritte a mano sul server in api/admins.php (oltre a chi è promosso dall'app). */
+function admin_emails(): array
+{
+    $file = __DIR__ . '/../admins.php';
+    $list = is_file($file) ? require $file : [];
+    return array_map(fn($e) => strtolower(trim((string) $e)), is_array($list) ? $list : []);
+}
+
+function require_admin(): array
+{
+    $u = require_user();
+    if (!$u['is_admin']) {
+        throw new HttpError(403, 'Serve un account amministratore.');
+    }
+    return $u;
 }
 
 function require_user(): array
@@ -100,11 +120,14 @@ function auth_login(): array
     $b = body();
     $email = normalize_email($b);
     check_login_rate();
-    $st = db()->prepare('SELECT id, email, password_hash FROM users WHERE email = ?');
+    $st = db()->prepare('SELECT id, email, password_hash, disabled FROM users WHERE email = ?');
     $st->execute([$email]);
     $u = $st->fetch();
     if (!$u || !password_verify((string) ($b['password'] ?? ''), $u['password_hash'])) {
         throw new HttpError(401, 'Email o password non corretti.');
+    }
+    if ($u['disabled']) {
+        throw new HttpError(403, 'Questo account è sospeso. Contatta SfascioHub.');
     }
     if (password_needs_rehash($u['password_hash'], PASSWORD_DEFAULT)) {
         db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')

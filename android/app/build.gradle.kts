@@ -29,7 +29,7 @@ android {
         versionName = flutter.versionName
     }
 
-    // Due app dallo stesso codice: chi cerca ricambi e chi gestisce il piazzale.
+    // Tre app dallo stesso codice: chi cerca ricambi, chi gestisce il piazzale, chi gestisce la piattaforma.
     flavorDimensions += "app"
     productFlavors {
         create("explore") {
@@ -39,6 +39,10 @@ android {
         create("gestione") {
             dimension = "app"
             applicationIdSuffix = ".gestione"
+        }
+        create("admin") {
+            dimension = "app"
+            applicationIdSuffix = ".admin"
         }
     }
 

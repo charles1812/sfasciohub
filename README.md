@@ -9,6 +9,7 @@ in quale sfasciacarrozze c'è l'auto giusta e quali parti sono integre.
 | 🌐 **Sito pubblico** | chi cerca ricambi | **[white-ferret-597873.hostingersite.com/sfasciohub/](https://white-ferret-597873.hostingersite.com/sfasciohub/)** |
 | 📱 **App SfascioHub** (Android) | chi gira per sfasciacarrozze | [Scarica l'APK](https://github.com/charles1812/sfasciohub/releases/latest) |
 | 🛠️ **SfascioHub Gestione** | chi lavora nel piazzale | [Android](https://github.com/charles1812/sfasciohub/releases/latest) · [Windows](https://github.com/charles1812/sfasciohub/releases/latest) · [Web](https://white-ferret-597873.hostingersite.com/sfasciohub/gestione/) |
+| 🛡️ **SfascioHub Admin** (Android) | chi gestisce la piattaforma | [Scarica l'APK](apk/) |
 
 > **Provala subito:** apri la [gestione web](https://white-ferret-597873.hostingersite.com/sfasciohub/gestione/) (o l'app Gestione), tocca
 > **"Entra come sfasciacarrozze di prova"** (`demo@sfasciohub.it` / `demo1234`) e aggiungi un veicolo con le foto.
@@ -34,6 +35,8 @@ in quale sfasciacarrozze c'è l'auto giusta e quali parti sono integre.
 - Scheda veicolo con galleria, mappa dei danni, elenco dei ricambi probabilmente recuperabili.
 - Chiama, scrivi su WhatsApp (messaggio già compilato) o apri le indicazioni stradali.
 - Elenco degli sfasciacarrozze iscritti, ognuno con la sua pagina e il suo piazzale.
+
+> 📱 **Tutte le app Android**: cartella [`apk/`](apk/) · 🗺️ **Piano della piattaforma**: [`docs/PIANO.md`](docs/PIANO.md)
 
 ## Architettura
 

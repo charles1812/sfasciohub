@@ -111,6 +111,33 @@ function ai_usage_table_sql(bool $sqlite): string
         )$engine";
 }
 
+/**
+ * Modifiche allo schema per i server già installati. Gira una volta sola
+ * (poi lascia api/schema_v2.flag) e ignora le colonne già presenti.
+ */
+function migrate_schema(PDO $pdo, bool $sqlite): void
+{
+    $flag = __DIR__ . '/../schema_v2.flag';
+    if (is_file($flag)) {
+        return;
+    }
+    $bool = $sqlite ? 'INTEGER' : 'TINYINT(1)';
+    $pdo->exec(ai_usage_table_sql($sqlite));
+    foreach ([
+        "ALTER TABLE users ADD COLUMN disabled $bool NOT NULL DEFAULT 0",
+        'ALTER TABLE yards ADD COLUMN ai_daily_limit INT NULL',
+    ] as $sql) {
+        try {
+            $pdo->exec($sql);
+        } catch (PDOException $e) {
+            if (!preg_match('/duplicate column/i', $e->getMessage())) {
+                throw $e;
+            }
+        }
+    }
+    @file_put_contents($flag, "2\n");
+}
+
 function create_schema(PDO $pdo, bool $sqlite): void
 {
     foreach (schema_statements($sqlite) as $sql) {

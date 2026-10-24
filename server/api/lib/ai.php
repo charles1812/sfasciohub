@@ -26,9 +26,15 @@ function ai_url(): string
     return (string) (config()['anthropic_url'] ?? 'https://api.anthropic.com/v1/messages');
 }
 
-function ai_daily_limit(): int
+/** Limite del piazzale (impostato dall'Admin), altrimenti quello del server. */
+function ai_daily_limit(array $yard): int
 {
-    return (int) (config()['ai_daily_limit'] ?? AI_DAILY_LIMIT);
+    return (int) ($yard['ai_daily_limit'] ?? config()['ai_daily_limit'] ?? AI_DAILY_LIMIT);
+}
+
+function ai_cost(int|string $in, int|string $out): float
+{
+    return round(((int) $in * AI_PRICE_IN + (int) $out * AI_PRICE_OUT) / 1e6, 4);
 }
 
 function ai_used_today(string $yardId): int
@@ -45,7 +51,7 @@ function ai_status(): array
     $enabled = ai_key() !== '';
     $out = [
         'enabled' => $enabled,
-        'remaining' => $enabled ? max(0, ai_daily_limit() - ai_used_today($yard['id'])) : 0,
+        'remaining' => $enabled ? max(0, ai_daily_limit($yard) - ai_used_today($yard['id'])) : 0,
     ];
     if ($enabled) {
         // spesa reale di questo sfasciacarrozze, dai token che l'API ha contato
@@ -56,7 +62,7 @@ function ai_status(): array
             'analyses' => (int) $t['n'],
             'input_tokens' => (int) $t['i'],
             'output_tokens' => (int) $t['o'],
-            'cost_usd' => round(($t['i'] * AI_PRICE_IN + $t['o'] * AI_PRICE_OUT) / 1e6, 4),
+            'cost_usd' => ai_cost($t['i'], $t['o']),
         ];
     }
     return $out;
@@ -153,8 +159,8 @@ function ai_analyze(): array
     if ($key === '') {
         throw new HttpError(503, 'Il riconoscimento automatico non è attivo su questo server.');
     }
-    if (ai_used_today($yard['id']) >= ai_daily_limit()) {
-        throw new HttpError(429, 'Hai usato tutte le analisi di oggi (' . ai_daily_limit() . '). Riprova domani.');
+    if (ai_used_today($yard['id']) >= ai_daily_limit($yard)) {
+        throw new HttpError(429, 'Hai usato tutte le analisi di oggi (' . ai_daily_limit($yard) . '). Riprova domani.');
     }
     $images = ai_images(body(), $yard);
 
@@ -215,7 +221,7 @@ function ai_analyze(): array
         'damage' => array_values(array_unique(array_intersect((array) ($r['damage'] ?? []), DAMAGE_ZONES))),
         'notes' => mb_substr(trim((string) ($r['notes'] ?? '')), 0, 1000),
         'confidence' => in_array($r['confidence'] ?? '', ['alta', 'media', 'bassa'], true) ? $r['confidence'] : 'bassa',
-        'remaining' => max(0, ai_daily_limit() - ai_used_today($yard['id'])),
+        'remaining' => max(0, ai_daily_limit($yard) - ai_used_today($yard['id'])),
     ];
 }
 

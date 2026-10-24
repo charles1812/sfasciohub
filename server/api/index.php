@@ -9,6 +9,7 @@ require __DIR__ . '/lib/auth.php';
 require __DIR__ . '/lib/handlers.php';
 require __DIR__ . '/lib/schema.php';
 require __DIR__ . '/lib/ai.php';
+require __DIR__ . '/lib/admin.php';
 
 try {
     cors();
@@ -43,6 +44,13 @@ try {
         ['DELETE', '/me/photos/{id}', fn($id) => delete_photo($id)],
         ['GET', '/me/ai', fn() => ai_status()],
         ['POST', '/me/ai/analyze', fn() => ai_analyze()],
+
+        ['GET', '/admin/overview', fn() => admin_overview()],
+        ['GET', '/admin/yards', fn() => admin_yards()],
+        ['PUT', '/admin/yards/{id}', fn($id) => admin_update_yard($id)],
+        ['GET', '/admin/users', fn() => admin_users()],
+        ['POST', '/admin/users', fn() => admin_create_user()],
+        ['PUT', '/admin/users/{id}', fn($id) => admin_update_user($id)],
     ];
 
     $knownPath = false;

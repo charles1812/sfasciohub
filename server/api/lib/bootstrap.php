@@ -33,6 +33,9 @@ function db(): PDO
     static $pdo = null;
     if ($pdo === null) {
         $pdo = connect(config()['db']);
+        if (function_exists('migrate_schema')) {
+            migrate_schema($pdo, is_sqlite());
+        }
     }
     return $pdo;
 }

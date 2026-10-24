@@ -201,6 +201,15 @@ class PhpRepository extends Repository {
   Future<void> reorderPhotos(Vehicle v, List<String> photoIds) async =>
       _call('PUT', '/me/vehicles/${v.id}/photos/order', json: {'order': photoIds});
 
+  // ---- app Admin ----
+  /// Chiamata diretta all'API (le rotte /admin/* servono solo all'app Admin).
+  Future<dynamic> request(String method, String route, {Object? json}) => _call(method, route, json: json);
+
+  Future<bool> isAdmin() async {
+    final me = await _call('GET', '/auth/me') as Map<String, dynamic>;
+    return (me['user'] as Map)['is_admin'] == true;
+  }
+
   @override
   Future<int?> aiRemaining() async {
     try {
