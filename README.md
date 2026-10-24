@@ -6,13 +6,16 @@ in quale sfasciacarrozze c'è l'auto giusta e quali parti sono integre.
 
 | | Per chi | Dove |
 |---|---|---|
-| 🌐 **Sito pubblico** | chi cerca ricambi | **[charles1812.github.io/sfasciohub](https://charles1812.github.io/sfasciohub/)** |
+| 🌐 **Sito pubblico** | chi cerca ricambi | **[white-ferret-597873.hostingersite.com/sfasciohub/](https://white-ferret-597873.hostingersite.com/sfasciohub/)** |
 | 📱 **App SfascioHub** (Android) | chi gira per sfasciacarrozze | [Scarica l'APK](https://github.com/charles1812/sfasciohub/releases/latest) |
-| 🛠️ **SfascioHub Gestione** | chi lavora nel piazzale | [Android](https://github.com/charles1812/sfasciohub/releases/latest) · [Windows](https://github.com/charles1812/sfasciohub/releases/latest) · [Web](https://charles1812.github.io/sfasciohub/gestione/) |
+| 🛠️ **SfascioHub Gestione** | chi lavora nel piazzale | [Android](https://github.com/charles1812/sfasciohub/releases/latest) · [Windows](https://github.com/charles1812/sfasciohub/releases/latest) · [Web](https://white-ferret-597873.hostingersite.com/sfasciohub/gestione/) |
 
-> **Provala subito:** apri la [gestione web](https://charles1812.github.io/sfasciohub/gestione/), tocca
-> **"Entra come sfasciacarrozze di prova"** (`demo@sfasciohub.it` / `demo1234`) e aggiungi un veicolo.
-> Poi apri il [sito pubblico](https://charles1812.github.io/sfasciohub/) nello stesso browser: lo trovi già lì.
+> **Provala subito:** apri la [gestione web](https://white-ferret-597873.hostingersite.com/sfasciohub/gestione/) (o l'app Gestione), tocca
+> **"Entra come sfasciacarrozze di prova"** (`demo@sfasciohub.it` / `demo1234`) e aggiungi un veicolo con le foto.
+> Compare subito sul [sito pubblico](https://white-ferret-597873.hostingersite.com/sfasciohub/) e nell'app SfascioHub, da qualsiasi dispositivo.
+>
+> Gira su un server PHP + MySQL proprio (Hostinger). Su [GitHub Pages](https://charles1812.github.io/sfasciohub/) resta una
+> versione demo offline, con dati salvati solo nel browser.
 
 ## Cosa fa
 
