@@ -7,6 +7,8 @@ const AI_MODEL = 'claude-haiku-5-5';
 const AI_MAX_IMAGES = 5;
 const AI_MAX_IMAGE_BYTES = 5 * 1024 * 1024;   // limite dell'API per immagine
 const AI_DAILY_LIMIT = 40;                    // analisi al giorno per sfasciacarrozze
+const AI_PRICE_IN = 0.10;                     // $ per milione di token (Haiku 5.5, prompt fino a 100K)
+const AI_PRICE_OUT = 0.50;
 
 function ai_key(): string
 {
@@ -41,10 +43,23 @@ function ai_status(): array
 {
     $yard = require_my_yard(require_user());
     $enabled = ai_key() !== '';
-    return [
+    $out = [
         'enabled' => $enabled,
         'remaining' => $enabled ? max(0, ai_daily_limit() - ai_used_today($yard['id'])) : 0,
     ];
+    if ($enabled) {
+        // spesa reale di questo sfasciacarrozze, dai token che l'API ha contato
+        $st = db()->prepare('SELECT COUNT(*) n, COALESCE(SUM(input_tokens), 0) i, COALESCE(SUM(output_tokens), 0) o FROM ai_usage WHERE yard_id = ?');
+        $st->execute([$yard['id']]);
+        $t = $st->fetch();
+        $out['usage'] = [
+            'analyses' => (int) $t['n'],
+            'input_tokens' => (int) $t['i'],
+            'output_tokens' => (int) $t['o'],
+            'cost_usd' => round(($t['i'] * AI_PRICE_IN + $t['o'] * AI_PRICE_OUT) / 1e6, 4),
+        ];
+    }
+    return $out;
 }
 
 /** Le foto da analizzare: immagini nuove (base64) e/o foto già salvate del veicolo. */
@@ -117,7 +132,8 @@ Sei il perito di uno sfasciacarrozze italiano. Le foto mostrano un veicolo appen
 Compila la scheda in italiano:
 - make, model: marca e modello come li scriverebbe un ricambista (es. "Fiat", "Punto Evo"). Vuoti se non riconoscibili.
 - version: allestimento o motorizzazione solo se si vede (scritte, badge), altrimenti vuoto.
-- year: anno più probabile; year_range: la serie/generazione con gli anni di produzione (es. "2009–2012, 1ª serie"). year = 0 se non stimabile.
+- year: anno più probabile, sempre compilato quando riconosci il modello (meglio una stima che niente: chi usa la scheda lo corregge);
+  year_range: la serie/generazione con gli anni di produzione (es. "2009–2012, 1ª serie"). year = 0 solo se il modello è irriconoscibile.
 - fuel: solo se lo indicano badge o scritte (TDI, JTD, GPL, hybrid…), altrimenti "".
 - color: colore della carrozzeria in parole semplici.
 - damage: le zone danneggiate visibili, tra: front (frontale), front_left / front_right (angolo anteriore sx/dx),
@@ -180,12 +196,19 @@ function ai_analyze(): array
         throw new HttpError(422, 'Nelle foto non riconosco un veicolo.');
     }
 
+    $maxYear = (int) gmdate('Y') + 1;
     $year = (int) ($r['year'] ?? 0);
+    if ($year < 1950 || $year > $maxYear) {
+        // nessun anno ma la serie sì (es. "2009–2012"): si prende il centro dell'intervallo
+        preg_match_all('/\b(19[5-9]\d|20\d\d)\b/', (string) ($r['year_range'] ?? ''), $m);
+        $years = array_values(array_filter(array_map('intval', $m[1]), fn($y) => $y <= $maxYear));
+        $year = $years ? (int) round((min($years) + max($years)) / 2) : 0;
+    }
     return [
         'make' => mb_substr(trim((string) ($r['make'] ?? '')), 0, 60),
         'model' => mb_substr(trim((string) ($r['model'] ?? '')), 0, 80),
         'version' => mb_substr(trim((string) ($r['version'] ?? '')), 0, 120),
-        'year' => $year >= 1950 && $year <= (int) gmdate('Y') + 1 ? $year : null,
+        'year' => $year ?: null,
         'year_range' => mb_substr(trim((string) ($r['year_range'] ?? '')), 0, 120),
         'fuel' => in_array($r['fuel'] ?? '', FUELS, true) ? $r['fuel'] : '',
         'color' => mb_substr(trim((string) ($r['color'] ?? '')), 0, 40),

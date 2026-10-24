@@ -273,6 +273,10 @@ class _VehicleEditorState extends State<VehicleEditor> {
                       ? 'Analisi di oggi esaurite'
                       : 'Compila dalle foto (marca, modello, anno, danni)'),
         ),
+        if (_aiRemaining! > 0 && !_aiBusy) ...[
+          const SizedBox(height: 4),
+          Text('Usa fino a 5 foto · ancora $_aiRemaining analisi oggi', style: t.bodySmall, textAlign: TextAlign.center),
+        ],
         if (_ai case final r?) ...[
           const SizedBox(height: 10),
           Container(
