@@ -1,6 +1,8 @@
 api/config.php
 api/ai_key.php
 api/admins.php
+api/deploy_key.php
+api/deploy_backups/
 api/*.flag
 api/*.sqlite
 uploads/*

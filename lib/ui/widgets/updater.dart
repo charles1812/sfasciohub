@@ -106,11 +106,29 @@ class UpdateGate extends StatefulWidget {
   State<UpdateGate> createState() => _UpdateGateState();
 }
 
-class _UpdateGateState extends State<UpdateGate> {
+class _UpdateGateState extends State<UpdateGate> with WidgetsBindingObserver {
+  DateTime _last = DateTime.now();
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Updater.instance.check();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Ricontrolla da sola quando l'app torna in primo piano (al massimo ogni 10 minuti).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && DateTime.now().difference(_last) > const Duration(minutes: 10)) {
+      _last = DateTime.now();
+      Updater.instance.check();
+    }
   }
 
   @override

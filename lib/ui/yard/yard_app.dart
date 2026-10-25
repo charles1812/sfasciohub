@@ -260,17 +260,9 @@ class _YardHomeState extends State<YardHome> {
           PopupMenuButton<String>(
             onSelected: (v) async {
               if (v == 'out') Repository.instance.signOut();
-              if (v == 'update') {
-                final messenger = ScaffoldMessenger.of(context);
-                if (!await Updater.instance.check()) {
-                  messenger.showSnackBar(const SnackBar(content: Text("Hai già l'ultima versione.")));
-                }
-              }
             },
             itemBuilder: (_) => [
               PopupMenuItem(enabled: false, child: Text(Repository.instance.currentUser?.email ?? '')),
-              if (Updater.supported)
-                const PopupMenuItem(value: 'update', child: ListTile(leading: Icon(Icons.system_update), title: Text('Cerca aggiornamenti'))),
               const PopupMenuItem(value: 'out', child: ListTile(leading: Icon(Icons.logout), title: Text('Esci'))),
             ],
           ),

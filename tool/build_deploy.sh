@@ -41,7 +41,7 @@ sed -i 's#<title>SfascioHub · Ricambi usati dagli sfasciacarrozze</title>#<titl
 # API e cartella foto, senza configurazioni o database locali
 mkdir -p "$OUT/api" "$OUT/uploads"
 cp -r server/api/. "$OUT/api/"
-rm -f "$OUT/api/config.php" "$OUT/api/ai_key.php" "$OUT"/api/*.sqlite "$OUT"/api/*.bak
+rm -rf "$OUT/api/deploy_backups"; rm -f "$OUT/api/deploy_key.php" "$OUT/api/admins.php" "$OUT/api/config.php" "$OUT/api/ai_key.php" "$OUT"/api/*.sqlite "$OUT"/api/*.bak
 cp server/uploads/.htaccess "$OUT/uploads/"
 
 # Sito: niente elenco dei file, cache lunga per gli asset
