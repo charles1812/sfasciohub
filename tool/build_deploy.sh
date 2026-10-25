@@ -9,6 +9,7 @@
 # Struttura sul server:
 #   index.html …   sito pubblico (Esplora)
 #   gestione/      app di gestione web
+#   admin/         pannello admin web
 #   api/           API PHP (apri api/install.php una volta per collegare il database)
 #   uploads/       foto dei veicoli
 set -euo pipefail
@@ -30,6 +31,8 @@ flutter build web -t lib/main_explore.dart --base-href "$BASE" -o build/web_expl
   --dart-define=API_URL=api/ ${SITE:+} "${defines[@]}"
 flutter build web -t lib/main_yard.dart --base-href "${BASE}gestione/" -o build/web_gestione \
   --dart-define=API_URL=../api/ "${defines[@]}"
+flutter build web -t lib/main_admin.dart --base-href "${BASE}admin/" -o build/web_admin \
+  --dart-define=API_URL=../api/ "${defines[@]}"
 
 rm -rf "$OUT"
 mkdir -p "$OUT"
@@ -37,6 +40,12 @@ cp -r build/web_explore/. "$OUT/"
 mkdir -p "$OUT/gestione"
 cp -r build/web_gestione/. "$OUT/gestione/"
 sed -i 's#<title>SfascioHub · Ricambi usati dagli sfasciacarrozze</title>#<title>SfascioHub Gestione</title>#' "$OUT/gestione/index.html"
+mkdir -p "$OUT/admin"
+cp -r build/web_admin/. "$OUT/admin/"
+sed -i 's#<title>SfascioHub · Ricambi usati dagli sfasciacarrozze</title>#<title>SfascioHub Admin</title>#' "$OUT/admin/index.html"
+# il pannello admin non deve finire su Google
+sed -i 's#<head>#<head>\n  <meta name="robots" content="noindex, nofollow">#' "$OUT/admin/index.html"
+sed -i 's#content="SfascioHub">#content="SfascioHub Admin">#' "$OUT/admin/index.html"
 
 # API e cartella foto, senza configurazioni o database locali
 mkdir -p "$OUT/api" "$OUT/uploads"
