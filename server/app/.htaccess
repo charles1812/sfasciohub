@@ -1,0 +1,16 @@
+# Pagina di download e APK delle app Android
+Options -Indexes
+AddType application/vnd.android.package-archive .apk
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  <FilesMatch "\.apk$">
+    Header set Content-Disposition "attachment"
+    Header set Cache-Control "no-cache"
+    Header set X-Content-Type-Options nosniff
+  </FilesMatch>
+  <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

@@ -106,8 +106,8 @@
   </details>
 </main>
 <script>
-  // Ultima versione pubblicata su GitHub: i link non cambiano mai.
-  var base = 'https://github.com/charles1812/sfasciohub/releases/latest/download/';
+  // Gli APK stanno in questa stessa cartella del sito (tool/upload_apks.sh li aggiorna a ogni versione).
+  var base = '';
   document.querySelectorAll('[data-apk]').forEach(function (a) {
     var name = a.getAttribute('data-apk');
     a.href = base + name + '-arm64.apk';

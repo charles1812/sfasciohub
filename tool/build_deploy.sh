@@ -49,7 +49,7 @@ sed -i 's#content="SfascioHub">#content="SfascioHub Admin">#' "$OUT/admin/index.
 
 # pagina per scaricare le app Android (sito/app/)
 mkdir -p "$OUT/app"
-cp server/app/index.html "$OUT/app/"
+cp server/app/index.html server/app/.htaccess "$OUT/app/"
 
 # API e cartella foto, senza configurazioni o database locali
 mkdir -p "$OUT/api" "$OUT/uploads"

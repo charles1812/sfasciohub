@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Compila le tre app Android e la Gestione per Windows, scrive version.json e pubblica la release su GitHub.
 # Le app installate la trovano da sole (controllano version.json dell'ultima release).
+# Gli APK vanno anche nella cartella app/ del sito: da lì li scaricano la pagina di download e gli aggiornamenti.
 #
 #   tool/release.sh "note della versione"
 #
@@ -38,7 +39,9 @@ flutter build windows --release -t lib/main_yard.dart "${D[@]}" | grep -q "Built
 powershell -NoProfile -Command "Compress-Archive -Path 'build/windows/x64/runner/Release/*' -DestinationPath '$OUT/SfascioHub-Gestione-Windows.zip' -Force"
 echo "windows ok"
 
-URL="https://github.com/$REPO/releases/download/v$VER"
+# gli APK si scaricano dal nostro sito (da GitHub su alcuni telefoni il download si blocca al 100%)
+bash "$ROOT/tool/upload_apks.sh"
+URL="${SITE}app"
 python - "$OUT/version.json" "$VER" "$BUILD" "$NOTES" "$URL" <<'PY'
 import json, sys
 out, ver, build, notes, url = sys.argv[1:]
