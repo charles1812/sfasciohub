@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Scarica le app SfascioHub</title>
+<link rel="icon" href="../favicon.png">
+<style>
+  :root {
+    --ink: #0F1A1C; --surface: #16262A; --surface2: #1E3338; --line: #2A4045;
+    --text: #EAF2EF; --muted: #8FA6A2; --orange: #F26B1D; --gold: #E0B15E; --ok: #5FD3A1; --damage: #FF8A75;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ink); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 28px 16px 48px; }
+  h1 { font-size: 28px; line-height: 1.15; margin: 0 0 6px; }
+  h2 { font-size: 17px; margin: 0; }
+  p { margin: 0 0 12px; color: var(--muted); }
+  .warn { background: rgba(224,177,94,.12); border: 1px solid rgba(224,177,94,.35); color: var(--gold); border-radius: 14px; padding: 12px 14px; margin: 18px 0; font-size: 14.5px; }
+  .warn a { color: var(--text); font-weight: 700; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 18px; margin: 14px 0; }
+  .head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .icon { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; font-size: 24px; flex: none; }
+  .head p { margin: 2px 0 0; font-size: 14px; }
+  .btn { display: block; text-align: center; text-decoration: none; background: var(--orange); color: #fff; font-weight: 700; font-size: 17px; padding: 15px; border-radius: 14px; }
+  .alt { display: block; text-align: center; margin-top: 10px; color: var(--muted); font-size: 13.5px; }
+  .alt a { color: var(--muted); }
+  ol { padding-left: 22px; margin: 8px 0 0; }
+  li { margin: 0 0 10px; }
+  li b { color: var(--text); }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin: 10px 0; }
+  summary { font-weight: 700; cursor: pointer; }
+  details p, details li { color: var(--muted); font-size: 15px; }
+  details p:first-of-type { margin-top: 10px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Scarica le app SfascioHub</h1>
+  <p>Per telefoni Android. Su iPhone e sul computer usa il <a href="../" style="color:var(--text)">sito</a>.</p>
+
+  <div class="warn hidden" id="inapp">
+    <span id="inappText">Hai aperto il link da WhatsApp, Gmail o un'altra app? Da lì il download degli APK si blocca al 100%.</span>
+    <a id="openChrome" href="#">Apri questa pagina in Chrome</a>
+  </div>
+  <div class="warn hidden" id="notandroid">
+    Questi file si installano solo su un telefono Android. Apri questa pagina dal telefono.
+  </div>
+
+  <section class="card">
+    <div class="head">
+      <div class="icon" style="background:rgba(242,107,29,.16)">🔍</div>
+      <div><h2>SfascioHub</h2><p>Per chi cerca un ricambio usato</p></div>
+    </div>
+    <a class="btn" data-apk="SfascioHub">Scarica SfascioHub</a>
+  </section>
+
+  <section class="card">
+    <div class="head">
+      <div class="icon" style="background:rgba(95,211,161,.14)">🚗</div>
+      <div><h2>SfascioHub Gestione</h2><p>Per lo sfasciacarrozze: carica le auto e i ricambi</p></div>
+    </div>
+    <a class="btn" data-apk="SfascioHub-Gestione">Scarica Gestione</a>
+  </section>
+
+  <section class="card">
+    <div class="head">
+      <div class="icon" style="background:rgba(224,177,94,.14)">📊</div>
+      <div><h2>SfascioHub Admin</h2><p>Solo per chi gestisce la piattaforma</p></div>
+    </div>
+    <a class="btn" data-apk="SfascioHub-Admin">Scarica Admin</a>
+  </section>
+
+  <section class="card">
+    <h2>Come si installa</h2>
+    <ol>
+      <li>Tocca <b>Scarica</b>. Chrome avvisa che il file potrebbe essere dannoso: tocca <b>Scarica comunque</b>
+        (lo dice per tutte le app che non vengono dal Play Store).</li>
+      <li>A download finito tocca <b>Apri</b> (oppure apri l'app <b>File → Download</b> e tocca il file).</li>
+      <li>La prima volta Android chiede il permesso: <b>Impostazioni → Consenti da questa fonte</b>, poi torna indietro.</li>
+      <li>Tocca <b>Installa</b>. Fatto: da qui in poi l'app si aggiorna da sola.</li>
+    </ol>
+  </section>
+
+  <details>
+    <summary>Dice "App non installata"</summary>
+    <p>Hai una versione vecchia (prima della 1.7.0) firmata in modo diverso.
+      <b>Disinstallala</b> (tieni premuta l'icona → Disinstalla) e installa di nuovo. Non perdi nulla: i dati sono sul server.</p>
+    <p>Se ancora non va, scarica la versione per tutti i telefoni: il link piccolo sotto ogni pulsante.</p>
+  </details>
+  <details>
+    <summary>Samsung: "Bloccato da Blocco automatico"</summary>
+    <p>Impostazioni → <b>Sicurezza e privacy</b> → <b>Blocco automatico</b> → spegnilo, installa l'app e poi, se vuoi, riaccendilo.</p>
+  </details>
+  <details>
+    <summary>Il download resta fermo al 100%</summary>
+    <p>Succede quando la pagina è aperta dentro un'altra app (WhatsApp, Gmail, Telegram…). Usa il pulsante qui sopra
+      "Apri questa pagina in Chrome", oppure copia l'indirizzo e incollalo in Chrome.</p>
+    <p>Se nella barra delle notifiche c'è "Download completato", toccala: il file è già pronto.</p>
+  </details>
+  <details>
+    <summary>Play Protect dice "App sconosciuta"</summary>
+    <p>Tocca <b>Altri dettagli → Installa comunque</b>. Succede perché l'app non è (ancora) sul Play Store.</p>
+  </details>
+</main>
+<script>
+  // Ultima versione pubblicata su GitHub: i link non cambiano mai.
+  var base = 'https://github.com/charles1812/sfasciohub/releases/latest/download/';
+  document.querySelectorAll('[data-apk]').forEach(function (a) {
+    var name = a.getAttribute('data-apk');
+    a.href = base + name + '-arm64.apk';
+    var alt = document.createElement('span');
+    alt.className = 'alt';
+    alt.innerHTML = 'Telefono vecchio o non si installa? <a href="' + base + name + '.apk">Versione per tutti i telefoni</a>';
+    a.parentNode.appendChild(alt);
+  });
+
+  var ua = navigator.userAgent;
+  var android = /Android/i.test(ua);
+  if (!android) document.getElementById('notandroid').classList.remove('hidden');
+  // browser interni di WhatsApp, Gmail, Facebook, Instagram, Telegram…: lì i download degli APK si bloccano
+  var inApp = android && (/; wv\)|FBAN|FBAV|Instagram|Line\/|GSA\/|Telegram|WhatsApp/i.test(ua) || !/Chrome\//.test(ua) && !/Firefox\//.test(ua));
+  if (android) {
+    var url = location.href.replace(/^https?:\/\//, '');
+    document.getElementById('openChrome').href = 'intent://' + url + '#Intent;scheme=https;package=com.android.chrome;end';
+  }
+  // i browser dentro le app (Gmail, WhatsApp…) spesso si presentano come Chrome: il pulsante resta sempre visibile
+  if (android) document.getElementById('inapp').classList.remove('hidden');
+  if (inApp) document.getElementById('inappText').textContent = "Sei dentro un'altra app (WhatsApp, Gmail…): da qui il download degli APK si blocca.";
+</script>
+</body>
+</html>

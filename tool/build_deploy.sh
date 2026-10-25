@@ -47,6 +47,10 @@ sed -i 's#<title>SfascioHub · Ricambi usati dagli sfasciacarrozze</title>#<titl
 sed -i 's#<head>#<head>\n  <meta name="robots" content="noindex, nofollow">#' "$OUT/admin/index.html"
 sed -i 's#content="SfascioHub">#content="SfascioHub Admin">#' "$OUT/admin/index.html"
 
+# pagina per scaricare le app Android (sito/app/)
+mkdir -p "$OUT/app"
+cp server/app/index.html "$OUT/app/"
+
 # API e cartella foto, senza configurazioni o database locali
 mkdir -p "$OUT/api" "$OUT/uploads"
 cp -r server/api/. "$OUT/api/"

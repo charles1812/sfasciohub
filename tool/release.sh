@@ -19,14 +19,20 @@ D=(--dart-define=API_URL="${SITE}api/" --dart-define=SITE_URL="$SITE")
 OUT=build/release
 mkdir -p "$OUT"
 
-apk() { # flavor, entry point, nome del file
-  flutter build apk --release --flavor "$1" -t "lib/$2.dart" "${D[@]}" | grep -q "Built" || { echo "Build $1 non riuscita" >&2; exit 1; }
-  cp "build/app/outputs/flutter-apk/app-$1-release.apk" "$OUT/$3"
+# Due APK per app: uno per tutti i telefoni (arm e arm64), che usa l'aggiornamento dentro l'app,
+# e uno più leggero solo arm64 (quasi tutti i telefoni dal 2017), per la pagina di download sito/app/.
+apk() { # flavor, entry point, nome del file senza .apk
+  flutter build apk --release --flavor "$1" -t "lib/$2.dart" --target-platform android-arm,android-arm64 "${D[@]}" \
+    | grep -q "Built" || { echo "Build $1 non riuscita" >&2; exit 1; }
+  cp "build/app/outputs/flutter-apk/app-$1-release.apk" "$OUT/$3.apk"
+  flutter build apk --release --flavor "$1" -t "lib/$2.dart" --split-per-abi --target-platform android-arm64 "${D[@]}" \
+    | grep -q "Built" || { echo "Build $1 arm64 non riuscita" >&2; exit 1; }
+  cp "build/app/outputs/flutter-apk/app-arm64-v8a-$1-release.apk" "$OUT/$3-arm64.apk"
   echo "$1 ok"
 }
-apk admin main_admin SfascioHub-Admin.apk
-apk gestione main_yard SfascioHub-Gestione.apk
-apk explore main_explore SfascioHub.apk
+apk admin main_admin SfascioHub-Admin
+apk gestione main_yard SfascioHub-Gestione
+apk explore main_explore SfascioHub
 
 flutter build windows --release -t lib/main_yard.dart "${D[@]}" | grep -q "Built" || { echo "Build Windows non riuscita" >&2; exit 1; }
 powershell -NoProfile -Command "Compress-Archive -Path 'build/windows/x64/runner/Release/*' -DestinationPath '$OUT/SfascioHub-Gestione-Windows.zip' -Force"
@@ -45,5 +51,6 @@ PY
 
 gh release create "v$VER" --repo "$REPO" --title "SfascioHub $VER" --notes "$NOTES" \
   "$OUT/SfascioHub.apk" "$OUT/SfascioHub-Gestione.apk" "$OUT/SfascioHub-Admin.apk" \
+  "$OUT/SfascioHub-arm64.apk" "$OUT/SfascioHub-Gestione-arm64.apk" "$OUT/SfascioHub-Admin-arm64.apk" \
   "$OUT/SfascioHub-Gestione-Windows.zip" "$OUT/version.json"
 curl -sL "https://github.com/$REPO/releases/latest/download/version.json" | grep '"build"'
