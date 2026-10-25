@@ -50,6 +50,19 @@ if ($what === 'uploads') {
     exit;
 }
 
+// una foto così com'è sul disco (dall'indirizzo pubblico il CDN di Hostinger la ricomprime)
+if ($what === 'file') {
+    $dir = realpath(__DIR__ . '/../uploads');
+    $path = $dir ? realpath($dir . '/' . (string) ($_GET['f'] ?? '')) : false;
+    if (!$path || !str_starts_with($path, $dir . DIRECTORY_SEPARATOR) || !is_file($path)) {
+        fail(404, 'Foto non trovata.');
+    }
+    header('Content-Type: application/octet-stream');
+    header('Content-Length: ' . filesize($path));
+    readfile($path);
+    exit;
+}
+
 if ($what !== 'db') {
     fail(400, 'Usa what=db oppure what=uploads.');
 }

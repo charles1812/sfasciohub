@@ -7,6 +7,7 @@
 #   <cartella>/uploads/                          le foto (scarica solo quelle nuove)
 #
 # Il database si ripristina importando il .sql (decompresso) da phpMyAdmin su Hostinger.
+# Le foto arrivano da api/backup.php e non dall'indirizzo pubblico, che il CDN ricomprime.
 # Usa la stessa chiave di tool/deploy.sh (~/.sfasciohub/deploy_key). Gira da solo ogni giorno
 # con l'attività pianificata "SfascioHub backup" (vedi tool/backup_schedule.ps1).
 set -euo pipefail
@@ -31,7 +32,7 @@ while IFS=$'\t' read -r file size; do
   dest="$OUT/uploads/$file"
   if [[ ! -f "$dest" || $(stat -c %s "$dest") != "$size" ]]; then
     mkdir -p "$(dirname "$dest")"
-    curl -sS --fail "$SITE/uploads/$file" -o "$dest.part" && mv "$dest.part" "$dest" && new=$((new + 1))
+    curl -sS --fail -H "X-Deploy-Key: $KEY" -G "$SITE/api/backup.php" --data-urlencode "what=file" --data-urlencode "f=$file" -o "$dest.part" && mv "$dest.part" "$dest" && new=$((new + 1))
   fi
 done < <(python -c "import json,sys; [print(f['file'], f['size'], sep='\t') for f in json.load(sys.stdin)['files']]" <<<"$list")
 
