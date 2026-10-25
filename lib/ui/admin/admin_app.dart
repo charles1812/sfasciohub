@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/updater.dart';
 import 'bi_tab.dart';
+import 'server_tab.dart';
 
 PhpRepository get _repo => Repository.instance as PhpRepository;
 
@@ -173,6 +174,7 @@ class _AdminHomeState extends State<_AdminHome> {
       _Yards(key: ValueKey('y$_reload')),
       _Requests(key: ValueKey('r$_reload')),
       _Errors(key: ValueKey('e$_reload')),
+      ServerTab(key: ValueKey('s$_reload')),
     ];
     return Scaffold(
       appBar: AppBar(
@@ -203,6 +205,10 @@ class _AdminHomeState extends State<_AdminHome> {
           : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
+        // sei schede: sul telefono il nome si vede solo su quella aperta
+        labelBehavior: MediaQuery.sizeOf(context).width < 600
+            ? NavigationDestinationLabelBehavior.onlyShowSelected
+            : NavigationDestinationLabelBehavior.alwaysShow,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.insights_outlined), selectedIcon: Icon(Icons.insights), label: 'Panoramica'),
@@ -210,6 +216,7 @@ class _AdminHomeState extends State<_AdminHome> {
           NavigationDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: 'Piazzali'),
           NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Richieste'),
           NavigationDestination(icon: Icon(Icons.bug_report_outlined), selectedIcon: Icon(Icons.bug_report), label: 'Errori'),
+          NavigationDestination(icon: Icon(Icons.dns_outlined), selectedIcon: Icon(Icons.dns), label: 'Server'),
         ],
       ),
     );

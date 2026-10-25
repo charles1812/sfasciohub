@@ -8,6 +8,8 @@
 declare(strict_types=1);
 
 require __DIR__ . '/lib/bootstrap.php';
+require __DIR__ . '/lib/schema.php';
+require __DIR__ . '/lib/status.php';
 
 header('Cache-Control: no-store');
 
@@ -91,3 +93,5 @@ foreach ($tables as $t) {
     gzwrite_out($gz, "\n");
 }
 gzwrite_out($gz, "SET FOREIGN_KEY_CHECKS = 1;\n", ZLIB_FINISH);
+// la scheda Server dell'app Admin mostra quando è stato fatto l'ultimo backup
+set_setting('last_backup', now());

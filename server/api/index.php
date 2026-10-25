@@ -14,6 +14,7 @@ require __DIR__ . '/lib/parts.php';
 require __DIR__ . '/lib/events.php';
 require __DIR__ . '/lib/bi.php';
 require __DIR__ . '/lib/account.php';
+require __DIR__ . '/lib/status.php';
 
 try {
     cors();
@@ -66,6 +67,8 @@ try {
         ['POST', '/admin/users', fn() => admin_create_user()],
         ['PUT', '/admin/users/{id}', fn($id) => admin_update_user($id)],
         ['GET', '/admin/errors', fn() => admin_errors()],
+        ['GET', '/admin/server', fn() => admin_server()],
+        ['PUT', '/admin/checklist/{id}', fn($id) => admin_checklist($id)],
         ['DELETE', '/admin/errors/{id}', fn($id) => admin_delete_error($id)],
     ];
 

@@ -111,7 +111,7 @@ function ai_usage_table_sql(bool $sqlite): string
         )$engine";
 }
 
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 /**
  * Modifiche allo schema per i server già installati. Ogni versione gira una volta sola
@@ -199,6 +199,13 @@ function migrate_schema(PDO $pdo, bool $sqlite): void
                 count INT NOT NULL DEFAULT 1,
                 first_at $dt NOT NULL,
                 last_at $dt NOT NULL
+            )$engine",
+        ],
+        // impostazioni della piattaforma (lista per la pubblicazione, ultimo backup…)
+        8 => [
+            "CREATE TABLE IF NOT EXISTS settings (
+                k VARCHAR(40) NOT NULL PRIMARY KEY,
+                v $text
             )$engine",
         ],
     ];
