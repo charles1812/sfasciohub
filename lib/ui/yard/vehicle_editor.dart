@@ -501,7 +501,7 @@ class _VehicleEditorState extends State<VehicleEditor> {
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
               Icon(icon, color: Brand.orange, size: 30),
               const SizedBox(height: 6),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF9A4510))),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: Brand.orangeDeep)),
             ]),
           ),
         ),

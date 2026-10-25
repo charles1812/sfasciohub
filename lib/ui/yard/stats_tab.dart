@@ -53,7 +53,7 @@ class StatsTabState extends State<StatsTab> {
 
     final header = Row(children: [
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('I tuoi dati', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+        Text('I tuoi dati', style: display(30)),
         Text('Visite e richieste dei clienti dal sito e dall\'app SfascioHub', style: t.bodyMedium),
       ])),
     ]);
@@ -80,13 +80,13 @@ class StatsTabState extends State<StatsTab> {
       crossAxisSpacing: 12,
       childAspectRatio: wide ? 1.9 : 1.45,
       children: [
-        StatTile(icon: Icons.visibility_outlined, color: Brand.orange, value: '${n(tot, 'view')}', label: 'visite alle auto',
+        StatTile(index: 0, gradient: Brand.sunset, icon: Icons.visibility_outlined, color: Brand.orange, value: '${n(tot, 'view')}', label: 'visite alle auto',
             delta: _delta(n(tot, 'view'), n(prev, 'view'))),
-        StatTile(icon: Icons.people_alt_outlined, color: const Color(0xFF3B7DD8), value: '${n(tot, 'visitors')}', label: 'persone diverse',
+        StatTile(index: 1, gradient: Brand.ocean, icon: Icons.people_alt_outlined, color: Brand.blue, value: '${n(tot, 'visitors')}', label: 'persone diverse',
             delta: _delta(n(tot, 'visitors'), n(prev, 'visitors'))),
-        StatTile(icon: Icons.call_outlined, color: Brand.ok, value: '${n(tot, 'contacts')}', label: 'contatti',
+        StatTile(index: 2, gradient: Brand.emerald, icon: Icons.call_outlined, color: Brand.ok, value: '${n(tot, 'contacts')}', label: 'contatti',
             delta: _delta(n(tot, 'contacts'), n(prev, 'contacts'))),
-        StatTile(icon: Icons.inventory_2_outlined, color: const Color(0xFF8E5BD9), value: '${n(tot, 'part')}', label: 'ricambi richiesti',
+        StatTile(index: 3, gradient: Brand.berry, icon: Icons.inventory_2_outlined, color: Brand.violet, value: '${n(tot, 'part')}', label: 'ricambi richiesti',
             delta: _delta(n(tot, 'part'), n(prev, 'part'))),
       ],
     );
@@ -151,10 +151,10 @@ class StatsTabState extends State<StatsTab> {
               for (final (i, p) in parts.take(10).indexed)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: _Rank(i + 1, color: const Color(0xFF8E5BD9)),
+                  leading: _Rank(i + 1, color: Brand.violet),
                   title: Text(p['name'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text(n(p, 'vehicles') > 1 ? 'su ${n(p, 'vehicles')} auto' : (p['example_vehicle'] as String? ?? '')),
-                  trailing: _Count(n(p, 'requests'), n(p, 'requests') == 1 ? 'richiesta' : 'richieste', color: const Color(0xFF8E5BD9)),
+                  trailing: _Count(n(p, 'requests'), n(p, 'requests') == 1 ? 'richiesta' : 'richieste', color: Brand.violet),
                 ),
             ]),
     );
@@ -221,11 +221,12 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return Card(
-      child: Padding(
+    return Rise(
+      index: 4,
+      child: Glass(
         padding: const EdgeInsets.all(18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(title, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+          Text(title, style: display(20)),
           if (subtitle != null) Text(subtitle!, style: t.bodySmall),
           const SizedBox(height: 14),
           child,

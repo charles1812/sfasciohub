@@ -111,7 +111,7 @@ function ai_usage_table_sql(bool $sqlite): string
         )$engine";
 }
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 /**
  * Modifiche allo schema per i server già installati. Ogni versione gira una volta sola
@@ -169,6 +169,9 @@ function migrate_schema(PDO $pdo, bool $sqlite): void
             )$engine",
             'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'events_yard_idx ON events (yard_id, created_at)',
             'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'events_visitor_idx ON events (visitor, created_at)',
+        ],
+        6 => [
+            "ALTER TABLE events ADD COLUMN text VARCHAR(120) NOT NULL DEFAULT ''",
         ],
     ];
     foreach ($steps as $v => $sqls) {

@@ -7,6 +7,7 @@ import '../../data/repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/damage_map.dart';
+import 'ask_part.dart';
 
 class VehiclePage extends StatefulWidget {
   const VehiclePage({super.key, required this.id});
@@ -154,6 +155,10 @@ class VehicleDetails extends StatelessWidget {
             ),
           );
 
+    final ask = preview || v.yard == null
+        ? null
+        : Padding(padding: const EdgeInsets.only(bottom: 16), child: AskPartCard(vehicle: v));
+
     final header = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [StatusPill(v.status), const SizedBox(width: 8), if (!v.published) const Chip(label: Text('Non pubblicato'))]),
       const SizedBox(height: 8),
@@ -189,7 +194,7 @@ class VehicleDetails extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Expanded(flex: 3, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        gallery, const SizedBox(height: 18), header, const SizedBox(height: 18), parts,
+                        gallery, const SizedBox(height: 18), header, const SizedBox(height: 18), ?ask, parts,
                       ])),
                       const SizedBox(width: 20),
                       Expanded(flex: 2, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -202,7 +207,7 @@ class VehicleDetails extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        header, const SizedBox(height: 16), yard, const SizedBox(height: 14), parts,
+                        header, const SizedBox(height: 16), ?ask, yard, const SizedBox(height: 14), parts,
                         const SizedBox(height: 14), damage, const SizedBox(height: 14), specs, const SizedBox(height: 24),
                       ]),
                     ),
@@ -233,7 +238,7 @@ class _GalleryState extends State<_Gallery> {
         Hero(tag: 'cover-${widget.vehicle.id}', child: VehicleCover(vehicle: widget.vehicle)),
         const Positioned(
           bottom: 10, right: 12,
-          child: Text('Foto non ancora disponibili', style: TextStyle(color: Colors.black54, fontSize: 12)),
+          child: Text('Foto non ancora disponibili', style: TextStyle(color: Colors.white60, fontSize: 12)),
         ),
       ]);
     }
@@ -307,21 +312,6 @@ class _PartsList extends StatefulWidget {
 class _PartsListState extends State<_PartsList> {
   bool _all = false;
 
-  /// Il cliente chiede un pezzo: si conta nelle statistiche del piazzale e si apre WhatsApp (o il telefono).
-  void _ask(VehiclePart p) {
-    final v = widget.vehicle;
-    final y = v.yard!;
-    Repository.instance.track('part', vehicleId: v.id, partId: p.id);
-    final text = 'Buongiorno, ho visto su SfascioHub la ${v.title}${v.year == null ? '' : ' ${v.year}'}. '
-        'Avete ancora: ${p.name}? Quanto costa?';
-    final digits = y.whatsapp.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isNotEmpty) {
-      openUrl('https://wa.me/$digits?text=${Uri.encodeComponent(text)}');
-    } else if (y.phone.isNotEmpty) {
-      openUrl('tel:${y.phone.replaceAll(' ', '')}');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
@@ -356,7 +346,7 @@ class _PartsListState extends State<_PartsList> {
                   if (!widget.preview && widget.vehicle.yard != null)
                     TextButton(
                       style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 10)),
-                      onPressed: () => _ask(p),
+                      onPressed: () => askPart(context, widget.vehicle, preset: p),
                       child: const Text('Chiedi'),
                     ),
                 ]),

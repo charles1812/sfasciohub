@@ -22,7 +22,8 @@ class YardApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
-      builder: (_, child) => UpdateGate(child: child!),
+      themeMode: ThemeMode.dark,
+      builder: (_, child) => AppBackground(child: UpdateGate(child: child!)),
       home: ListenableBuilder(
         listenable: Repository.instance,
         builder: (_, _) => Repository.instance.currentUser == null ? const AuthPage() : const _YardGate(),
@@ -130,7 +131,7 @@ class _AuthPageState extends State<AuthPage> {
                           decoration: BoxDecoration(color: Brand.orangeSoft, borderRadius: BorderRadius.circular(12)),
                           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                             Text(local ? 'Versione demo: i dati restano su questo dispositivo.' : "Vuoi solo provare? C'è un piazzale di prova condiviso.",
-                                style: const TextStyle(color: Color(0xFF6B300B), fontWeight: FontWeight.w600)),
+                                style: const TextStyle(color: Brand.gold, fontWeight: FontWeight.w600)),
                             const SizedBox(height: 6),
                             TextButton.icon(
                               onPressed: () {
@@ -361,25 +362,20 @@ class _VehiclesTabState extends State<VehiclesTab> {
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 96), children: [
         Constrained(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            GridView.count(
-              crossAxisCount: width >= 700 ? 4 : 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: width >= 700 ? 2 : 1.6,
-              children: [
-                StatTile(icon: Icons.directions_car, color: Brand.asphaltSoft, value: '${all.length}', label: 'nel piazzale',
-                    onTap: () => setState(() => _status = null)),
-                StatTile(icon: Icons.check_circle_outline, color: Brand.ok, value: '${count[VehicleStatus.available]}', label: 'disponibili',
-                    onTap: () => setState(() => _status = VehicleStatus.available)),
-                StatTile(icon: Icons.bookmark_outline, color: Brand.orange, value: '${count[VehicleStatus.reserved]}', label: 'riservati',
-                    onTap: () => setState(() => _status = VehicleStatus.reserved)),
-                StatTile(icon: Icons.no_photography_outlined, color: Brand.damage, value: '${all.where((v) => v.photos.isEmpty).length}',
-                    label: 'senza foto'),
-              ],
-            ),
-            const SizedBox(height: 14),
+            if (all.any((v) => v.photos.isEmpty))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Glass(
+                  blur: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(children: [
+                    const Icon(Icons.no_photography_outlined, color: Brand.damage, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text('${all.where((v) => v.photos.isEmpty).length} auto senza foto: con le foto ricevono molte più visite.',
+                        style: const TextStyle(fontWeight: FontWeight.w600))),
+                  ]),
+                ),
+              ),
             TextField(
               controller: _query,
               onChanged: (_) => setState(() {}),

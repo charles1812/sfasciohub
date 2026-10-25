@@ -128,7 +128,7 @@ class _CarPainter extends CustomPainter {
         bottomLeft: Radius.circular(w * .18), bottomRight: Radius.circular(w * .18));
     canvas.save();
     canvas.clipRRect(body);
-    canvas.drawRect(r(0, 0, 1, 1), Paint()..color = Colors.white);
+    canvas.drawRect(r(0, 0, 1, 1), Paint()..color = Colors.transparent);
     final zones = {
       DamageZone.front: r(.22, 0, .78, .17),
       DamageZone.frontLeft: r(0, 0, .22, .32),

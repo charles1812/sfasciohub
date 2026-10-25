@@ -7,6 +7,7 @@ import '../../data/repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/updater.dart';
+import 'bi_tab.dart';
 
 PhpRepository get _repo => Repository.instance as PhpRepository;
 
@@ -28,7 +29,8 @@ class AdminApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
-      builder: (_, child) => UpdateGate(child: child!),
+      themeMode: ThemeMode.dark,
+      builder: (_, child) => AppBackground(child: UpdateGate(child: child!)),
       home: !AppConfig.hasServer
           ? const Scaffold(body: Center(child: Text("L'app Admin funziona solo collegata al server.")))
           : ListenableBuilder(
@@ -176,7 +178,7 @@ class _AdminHomeState extends State<_AdminHome> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      _Overview(key: ValueKey('o$_reload')),
+      BiTab(key: ValueKey('o$_reload')),
       _Users(key: ValueKey('u$_reload')),
       _Yards(key: ValueKey('y$_reload')),
       _Requests(key: ValueKey('r$_reload')),
@@ -256,146 +258,6 @@ class _LoaderState extends State<_Loader> {
           ]));
         }
         return RefreshIndicator(onRefresh: () async => _reload(), child: widget.builder(context, snap.data, _reload));
-      },
-    );
-  }
-}
-
-class _Overview extends StatelessWidget {
-  const _Overview({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return _Loader(
-      route: '/admin/overview',
-      builder: (context, d, _) {
-        final ai = d['ai'] as Map;
-        final m = (d['month'] as Map?) ?? {};
-        final days = (d['days'] as List).cast<Map>();
-        final maxCost = days.fold<double>(0, (m, e) => (e['cost_usd'] as num) > m ? (e['cost_usd'] as num).toDouble() : m);
-        Widget stat(String label, String value, IconData icon) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(children: [
-                  Icon(icon, color: Brand.orange),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(value, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-                    Text(label, style: t.bodySmall),
-                  ])),
-                ]),
-              ),
-            );
-        return ListView(padding: const EdgeInsets.all(16), children: [
-          Constrained(
-            maxWidth: 900,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              GridView.count(
-                crossAxisCount: MediaQuery.sizeOf(context).width > 700 ? 4 : 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 2.2,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                children: [
-                  stat('piazzali', '${d['yards']}', Icons.storefront),
-                  stat('account', '${d['users']}', Icons.people),
-                  stat('veicoli', '${d['vehicles']}', Icons.directions_car),
-                  stat('foto', '${d['photos']}', Icons.photo_library),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      const Icon(Icons.auto_awesome, color: Brand.orange),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text('Spesa AI (Claude Haiku)', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
-                      Chip(
-                        label: Text(ai['enabled'] == true ? 'attiva' : 'spenta'),
-                        backgroundColor: ai['enabled'] == true ? Brand.okSoft : Brand.damageSoft,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ]),
-                    const SizedBox(height: 12),
-                    Wrap(spacing: 28, runSpacing: 12, children: [
-                      for (final (label, cost, n) in [
-                        ('oggi', null, ai['analyses_today']),
-                        ('questo mese', ai['cost_month_usd'], ai['analyses_month']),
-                        ('in totale', ai['cost_usd'], ai['analyses']),
-                      ])
-                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(cost == null ? '$n analisi' : usd(cost as num), style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-                          Text(cost == null ? label : '$label · $n analisi', style: t.bodySmall),
-                        ]),
-                    ]),
-                    const SizedBox(height: 6),
-                    Text('Limite predefinito: ${ai['default_daily_limit']} analisi al giorno per piazzale (cambialo per piazzale nella scheda Piazzali).',
-                        style: t.bodySmall),
-                    if (days.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Text('Ultimi 30 giorni', style: t.labelLarge),
-                      const SizedBox(height: 8),
-                      for (final day in days.reversed)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Row(children: [
-                            SizedBox(width: 50, child: Text(_date(day['day'] as String).substring(0, 5), style: t.bodySmall)),
-                            Expanded(child: LayoutBuilder(builder: (_, c) => Align(
-                              alignment: Alignment.centerLeft,
-                              child: Container(
-                                height: 14,
-                                width: maxCost == 0 ? 2 : (c.maxWidth * (day['cost_usd'] as num) / maxCost).clamp(2, c.maxWidth),
-                                decoration: BoxDecoration(color: Brand.orange, borderRadius: BorderRadius.circular(4)),
-                              ),
-                            ))),
-                            SizedBox(width: 110, child: Text('${usd(day['cost_usd'] as num)} · ${day['analyses']}', textAlign: TextAlign.right, style: t.bodySmall)),
-                          ]),
-                        ),
-                    ],
-                  ]),
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (m.isNotEmpty)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Questo mese, richiesta per richiesta', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 12),
-                      Wrap(spacing: 28, runSpacing: 14, children: [
-                        for (final (label, value) in [
-                          ('richieste', '${m['requests']}'),
-                          ('errori', '${m['failed']} (${((m['error_rate'] as num) * 100).toStringAsFixed(1)}%)'),
-                          ('tempo medio', m['avg_seconds'] == null ? '—' : '${m['avg_seconds']} s'),
-                          ('tempo massimo', '${m['max_seconds']} s'),
-                          ('costo medio a richiesta', usd(m['avg_cost_request'] as num)),
-                          ('analisi foto, a richiesta', usd(m['avg_cost_photo_request'] as num)),
-                          ('costo per immagine', usd(m['avg_cost_image'] as num)),
-                          ('immagini per analisi', '${m['avg_images']}'),
-                          ('lista ricambi, a richiesta', usd(m['avg_cost_parts'] as num)),
-                        ])
-                          SizedBox(
-                            width: 150,
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(value, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-                              Text(label, style: t.bodySmall),
-                            ]),
-                          ),
-                      ]),
-                    ]),
-                  ),
-                ),
-              const SizedBox(height: 8),
-              Text('I costi sono calcolati dai token che Anthropic ha contato per ogni analisi (prezzi Haiku 5.5: 0,10 \$ / 0,50 \$ per milione di token).',
-                  style: t.bodySmall),
-            ]),
-          ),
-        ]);
       },
     );
   }

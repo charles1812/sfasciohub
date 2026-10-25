@@ -12,6 +12,7 @@ require __DIR__ . '/lib/ai.php';
 require __DIR__ . '/lib/admin.php';
 require __DIR__ . '/lib/parts.php';
 require __DIR__ . '/lib/events.php';
+require __DIR__ . '/lib/bi.php';
 
 try {
     cors();
@@ -55,6 +56,7 @@ try {
         ['GET', '/admin/overview', fn() => admin_overview()],
         ['GET', '/admin/yards', fn() => admin_yards()],
         ['GET', '/admin/requests', fn() => admin_requests()],
+        ['GET', '/admin/bi', fn() => admin_bi()],
         ['PUT', '/admin/yards/{id}', fn($id) => admin_update_yard($id)],
         ['GET', '/admin/users', fn() => admin_users()],
         ['POST', '/admin/users', fn() => admin_create_user()],

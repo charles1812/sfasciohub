@@ -65,7 +65,7 @@ class VehicleCover extends StatelessWidget {
     if (vehicle.photos.isNotEmpty) return PhotoView(url: vehicle.photos.first.url);
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFE9ECEE), Color(0xFFCFD5D9)]),
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF2A4045), Color(0xFF16262A)]),
       ),
       child: CustomPaint(painter: _SilhouettePainter(vehicleColor(vehicle.color)), child: const SizedBox.expand()),
     );
@@ -126,8 +126,8 @@ class StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg) = switch (status) {
       VehicleStatus.available => (Brand.okSoft, Brand.ok),
-      VehicleStatus.reserved => (Brand.orangeSoft, const Color(0xFFB4510F)),
-      VehicleStatus.gone => (const Color(0xFFE4E4E4), const Color(0xFF666666)),
+      VehicleStatus.reserved => (Brand.orangeSoft, Brand.orangeDeep),
+      VehicleStatus.gone => (Brand.surface2, Brand.muted),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
@@ -302,12 +302,12 @@ class DemoBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         width: double.infinity,
-        color: Brand.orangeSoft,
+        color: Brand.goldSoft,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(children: [
-          const Icon(Icons.science_outlined, size: 18, color: Color(0xFF9A4510)),
+          const Icon(Icons.science_outlined, size: 18, color: Brand.gold),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B300B)))),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 12.5, color: Brand.gold))),
         ]),
       );
 }
@@ -334,9 +334,11 @@ class Constrained extends StatelessWidget {
       Center(heightFactor: 1, child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child));
 }
 
-/// Riquadro con un numero importante: icona colorata, valore, etichetta e (se c'è) la variazione.
+/// Riquadro con un numero importante: icona colorata, valore che sale, etichetta e (se c'è) la variazione.
+/// Con [gradient] diventa un riquadro colorato in evidenza, come le carte di Gruzzolo.
 class StatTile extends StatelessWidget {
-  const StatTile({super.key, required this.icon, required this.value, required this.label, this.color = Brand.orange, this.delta, this.onTap});
+  const StatTile({super.key, required this.icon, required this.value, required this.label, this.color = Brand.orange,
+      this.delta, this.onTap, this.gradient, this.index = 0});
   final IconData icon;
   final String value;
   final String label;
@@ -345,41 +347,52 @@ class StatTile extends StatelessWidget {
   /// Variazione rispetto al periodo precedente (0.25 = +25%).
   final double? delta;
   final VoidCallback? onTap;
+  final Gradient? gradient;
+  final int index;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final d = delta;
-    return Card(
-      child: InkWell(
+    final vivid = gradient != null;
+    final fg = vivid ? Colors.white : color;
+    final numeric = num.tryParse(value);
+    final valueStyle = display(30, color: vivid ? Colors.white : Brand.text);
+    return Rise(
+      index: index,
+      child: Glass(
+        gradient: gradient,
+        blur: vivid ? 0 : 14,
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: color.withValues(alpha: .13), borderRadius: BorderRadius.circular(12)),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const Spacer(),
-              if (d != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(color: (d >= 0 ? Brand.ok : Brand.damage).withValues(alpha: .12), borderRadius: BorderRadius.circular(100)),
-                  child: Text('${d >= 0 ? '▲' : '▼'} ${(d.abs() * 100).round()}%',
-                      style: TextStyle(color: d >= 0 ? Brand.ok : Brand.damage, fontWeight: FontWeight.w800, fontSize: 11.5)),
-                ),
-            ]),
-            const SizedBox(height: 8),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(value, style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: color, height: 1.05)),
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: (vivid ? Colors.white : color).withValues(alpha: vivid ? .22 : .16), borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: fg, size: 20),
             ),
-            Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+            const Spacer(),
+            if (d != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: vivid ? Colors.black.withValues(alpha: .18) : (d >= 0 ? Brand.ok : Brand.damage).withValues(alpha: .16),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Text('${d >= 0 ? '▲' : '▼'} ${(d.abs() * 100).round()}%',
+                    style: TextStyle(color: vivid ? Colors.white : (d >= 0 ? Brand.ok : Brand.damage), fontWeight: FontWeight.w800, fontSize: 11.5)),
+              ),
           ]),
-        ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: numeric != null ? CountUp(numeric, style: valueStyle) : Text(value, style: valueStyle),
+          ),
+          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: t.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: vivid ? Colors.white.withValues(alpha: .85) : Brand.muted)),
+        ]),
       ),
     );
   }

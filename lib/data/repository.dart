@@ -100,7 +100,7 @@ abstract class Repository extends ChangeNotifier {
   // ---- statistiche ----
   /// Lato clienti: segnala una visita ("view", "yard_view"), un contatto ("call", "whatsapp", "maps")
   /// o un ricambio richiesto ("part"). Non blocca mai l'interfaccia e ignora gli errori.
-  void track(String kind, {String? vehicleId, String? yardId, String? partId});
+  void track(String kind, {String? vehicleId, String? yardId, String? partId, String? text});
 
   /// Lato piazzale: visite, contatti e ricambi richiesti negli ultimi [days] giorni.
   Future<Map<String, dynamic>> myStats({int days = 30});

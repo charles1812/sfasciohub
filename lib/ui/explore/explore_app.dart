@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../config.dart';
@@ -20,7 +21,8 @@ class ExploreApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
-      builder: (_, child) => UpdateGate(child: child!),
+      themeMode: ThemeMode.dark,
+      builder: (_, child) => AppBackground(child: UpdateGate(child: child!)),
       onGenerateRoute: (settings) {
         final parts = Uri.parse(settings.name ?? '/').pathSegments;
         Widget page = const ExploreHome();
@@ -199,7 +201,7 @@ class _SearchTabState extends State<SearchTab> {
                     ),
                     const SizedBox(height: 12),
                     Text('Trova il ricambio\nnel piazzale giusto',
-                        style: TextStyle(color: Colors.white, fontSize: width >= 700 ? 38 : 28, fontWeight: FontWeight.w900, height: 1.1, letterSpacing: -.5)),
+                        style: display(width >= 700 ? 46 : 34, color: Colors.white)),
                     const SizedBox(height: 8),
                     const Text('Le auto presenti oggi negli sfasciacarrozze, con i pezzi ancora sani da recuperare.',
                         style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4)),
@@ -456,49 +458,70 @@ class AboutTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    Widget step(IconData i, String title, String body) => Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            CircleAvatar(backgroundColor: Brand.orangeSoft, foregroundColor: Brand.orange, child: Icon(i)),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-              Text(body),
-            ])),
-          ]),
+    Widget step(int i, IconData icon, Gradient g, String title, String body) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Rise(
+            index: i,
+            child: Glass(
+              padding: const EdgeInsets.all(16),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(gradient: g, borderRadius: BorderRadius.circular(14)),
+                  child: Icon(icon, color: Colors.white),
+                ),
+                const SizedBox(width: 14),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 2),
+                  Text(body, style: t.bodyMedium?.copyWith(color: Brand.muted)),
+                ])),
+              ]),
+            ),
+          ),
         );
     return ListView(padding: const EdgeInsets.all(20), children: [
       Constrained(
         maxWidth: 760,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Come funziona', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 16),
-          step(Icons.photo_camera_outlined, 'Lo sfasciacarrozze fotografa l\'auto',
-              'Appena un veicolo entra nel piazzale, dall\'app Gestione si scattano le foto e si segnano anno, modello e zone danneggiate.'),
-          step(Icons.public, 'Il veicolo compare qui',
-              'Subito visibile a tutti, con la mappa delle zone integre: frontale, fiancate, motore, interni…'),
-          step(Icons.call_outlined, 'Chiami e vai a prendere il pezzo',
-              'Contatti lo sfasciacarrozze per telefono o WhatsApp e ti fai preparare il ricambio.'),
-          const Divider(height: 36),
-          Text('Hai uno sfasciacarrozze?', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+          Text('Come funziona', style: display(34)),
           const SizedBox(height: 6),
-          const Text('Iscriviti gratis e metti online il tuo piazzale: app Android, programma per computer o direttamente dal browser.'),
-          const SizedBox(height: 14),
-          Wrap(spacing: 10, runSpacing: 10, children: [
-            FilledButton.icon(
-              onPressed: () => openUrl('${AppConfig.site}gestione/'),
-              icon: const Icon(Icons.dashboard_customize_outlined),
-              label: const Text('Apri la gestione web'),
+          Text('Dal piazzale al tuo ricambio in tre passi.', style: t.bodyLarge?.copyWith(color: Brand.muted)),
+          const SizedBox(height: 18),
+          step(0, Icons.photo_camera_outlined, Brand.sunset, "Lo sfasciacarrozze fotografa l'auto",
+              "Appena un veicolo entra nel piazzale si scattano le foto: l'AI riconosce modello, anno e danni."),
+          step(1, Icons.inventory_2_outlined, Brand.goldGlow, 'Compare con i pezzi disponibili',
+              'Subito online, con la lista dei ricambi probabilmente sani: fari, porte, motore, interni…'),
+          step(2, Icons.chat_bubble_outline, Brand.emerald, 'Chiedi il pezzo e vai a prenderlo',
+              'Tocchi "Chiedi un pezzo": parte un messaggio WhatsApp già scritto, oppure chiami il piazzale.'),
+          // l'invito ai piazzali solo sul sito: nell'app per i clienti non serve
+          if (kIsWeb) ...[
+            const SizedBox(height: 18),
+            Rise(
+              index: 3,
+              child: Glass(
+                gradient: Brand.lagoon,
+                blur: 0,
+                padding: const EdgeInsets.all(20),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Hai uno sfasciacarrozze?', style: display(24, color: Colors.white)),
+                  const SizedBox(height: 6),
+                  Text('Metti online il tuo piazzale: foto, AI che compila le schede e clienti che ti scrivono.',
+                      style: TextStyle(color: Colors.white.withValues(alpha: .9), fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF16262A)),
+                    onPressed: () => openUrl('${AppConfig.site}gestione/'),
+                    icon: const Icon(Icons.storefront_outlined),
+                    label: const Text('Entra nella gestione'),
+                  ),
+                ]),
+              ),
             ),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16)),
-              onPressed: () => openUrl('https://github.com/charles1812/sfasciohub/releases/latest'),
-              icon: const Icon(Icons.android),
-              label: const Text('Scarica le app'),
-            ),
-          ]),
+          ],
           const SizedBox(height: 30),
-          Text('SfascioHub · un progetto di @charles1812', style: t.bodySmall),
+          Text('SfascioHub', style: t.bodySmall),
         ]),
       ),
     ]);

@@ -48,7 +48,9 @@ function track_event(): array
     if ((int) $st->fetchColumn() >= EVENTS_PER_VISITOR_DAY) {
         return ['ok' => true, 'counted' => false];
     }
-    $partId = $kind === 'part' ? substr((string) ($b['part_id'] ?? ''), 0, 40) : null;
+    $partId = $kind === 'part' ? (substr((string) ($b['part_id'] ?? ''), 0, 40) ?: null) : null;
+    // pezzo scritto dal cliente (o la zona scelta) quando non c'è nella lista
+    $text = $kind === 'part' ? mb_substr(trim(strip_tags((string) ($b['text'] ?? ''))), 0, 120) : '';
     // una visita per persona, per auto, al giorno
     if ($kind === 'view' || $kind === 'yard_view') {
         $st = db()->prepare('SELECT 1 FROM events WHERE visitor = ? AND kind = ? AND yard_id = ? AND COALESCE(vehicle_id, \'\') = ? AND created_at >= ?');
@@ -57,8 +59,8 @@ function track_event(): array
             return ['ok' => true, 'counted' => false];
         }
     }
-    db()->prepare('INSERT INTO events (yard_id, vehicle_id, kind, part_id, visitor, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-        ->execute([$yardId, $vehicleId ?: null, $kind, $partId, $visitor, now()]);
+    db()->prepare('INSERT INTO events (yard_id, vehicle_id, kind, part_id, text, visitor, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        ->execute([$yardId, $vehicleId ?: null, $kind, $partId, $text, $visitor, now()]);
     return ['ok' => true, 'counted' => true];
 }
 
@@ -122,12 +124,14 @@ function my_stats(): array
         'parts' => (int) $r['parts'],
     ], $st->fetchAll());
 
-    $st = db()->prepare("SELECT e.part_id, COUNT(*) n, COUNT(DISTINCT e.vehicle_id) cars, MAX(p.name) name,
+    // raggruppati per pezzo della lista, oppure per testo scritto dal cliente
+    $st = db()->prepare("SELECT COALESCE(e.part_id, LOWER(e.text)) k, MAX(e.part_id) part_id, MAX(e.text) text,
+                                COUNT(*) n, COUNT(DISTINCT e.vehicle_id) cars, MAX(p.name) name,
                                 MAX(CONCAT_WS(' ', v.make, v.model)) car
                          FROM events e LEFT JOIN vehicle_parts p ON p.vehicle_id = e.vehicle_id AND p.part_id = e.part_id
                          LEFT JOIN vehicles v ON v.id = e.vehicle_id
                          WHERE e.yard_id = ? AND e.kind = 'part' AND e.created_at >= ?
-                         GROUP BY e.part_id ORDER BY n DESC LIMIT 20");
+                         GROUP BY COALESCE(e.part_id, LOWER(e.text)) ORDER BY n DESC LIMIT 20");
     if (is_sqlite()) {
         // SQLite non ha CONCAT_WS
         $st = db()->prepare(str_replace("CONCAT_WS(' ', v.make, v.model)", "v.make || ' ' || v.model", $st->queryString));
@@ -136,7 +140,7 @@ function my_stats(): array
     $idx = part_index();
     $parts = array_map(fn($r) => [
         'part_id' => $r['part_id'],
-        'name' => $r['name'] ?: ($idx[$r['part_id']]['name'] ?? $r['part_id']),
+        'name' => $r['name'] ?: ($idx[$r['part_id'] ?? '']['name'] ?? ($r['text'] ?: ($r['part_id'] ?? 'Pezzo'))),
         'requests' => (int) $r['n'],
         'vehicles' => (int) $r['cars'],
         'example_vehicle' => $r['car'],
