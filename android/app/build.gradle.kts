@@ -1,3 +1,12 @@
+import java.util.Properties
+
+// Chiave di firma definitiva: sta fuori dal repository, in ~/.sfasciohub/ (release.jks + release.properties).
+// Senza quei file si firma con la chiave di debug (va bene per provare, non per distribuire).
+val releaseProps = Properties().apply {
+    val f = file("${System.getProperty("user.home")}/.sfasciohub/release.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -46,11 +55,20 @@ android {
         }
     }
 
+    signingConfigs {
+        if (releaseProps.containsKey("storeFile")) {
+            create("release") {
+                storeFile = file("${System.getProperty("user.home")}/.sfasciohub/${releaseProps["storeFile"]}")
+                storePassword = releaseProps["storePassword"] as String
+                keyAlias = releaseProps["keyAlias"] as String
+                keyPassword = releaseProps["keyPassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 }

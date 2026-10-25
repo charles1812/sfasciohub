@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'data/error_reporter.dart';
 import 'data/repository.dart';
 import 'ui/explore/explore_app.dart';
 
@@ -7,5 +8,6 @@ import 'ui/explore/explore_app.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Repository.init();
+  ErrorReporter.install('esplora');
   runApp(const ExploreApp());
 }

@@ -36,7 +36,8 @@ class PhpRepository extends Repository {
     return r;
   }
 
-  static AppUser _userFrom(dynamic u) => AppUser(id: u['id'] as String, email: u['email'] as String);
+  static AppUser _userFrom(dynamic u) =>
+      AppUser(id: u['id'] as String, email: u['email'] as String, emailVerified: u['email_verified'] != false);
 
   Future<void> _setToken(String? t) async {
     _token = t;
@@ -162,6 +163,22 @@ class PhpRepository extends Repository {
     _user = null;
     notifyListeners();
   }
+
+  @override
+  Future<void> forgotPassword(String email) async => _call('POST', '/auth/forgot', json: {'email': email.trim()});
+
+  @override
+  Future<void> resendVerification() async => _call('POST', '/me/verify/resend');
+
+  @override
+  Future<void> refreshUser() async {
+    final me = await _call('GET', '/auth/me') as Map<String, dynamic>;
+    _user = _userFrom(me['user']);
+    notifyListeners();
+  }
+
+  @override
+  void reportError(Map<String, String> error) => _call('POST', '/errors', json: error, timeout: const Duration(seconds: 10)).ignore();
 
   // ---- gestione ----
   @override

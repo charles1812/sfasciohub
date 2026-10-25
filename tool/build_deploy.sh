@@ -21,7 +21,7 @@ SITE="${2:-}"
 [[ "$BASE" == */ ]] || BASE="$BASE/"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/build/deploy"
-DEMO="${DEMO_LOGIN:-true}"
+DEMO="${DEMO_LOGIN:-false}"   # DEMO_LOGIN=true mostra "entra come piazzale di prova"
 
 cd "$ROOT"
 defines=(--dart-define=DEMO_LOGIN="$DEMO")
@@ -50,7 +50,7 @@ sed -i 's#content="SfascioHub">#content="SfascioHub Admin">#' "$OUT/admin/index.
 # API e cartella foto, senza configurazioni o database locali
 mkdir -p "$OUT/api" "$OUT/uploads"
 cp -r server/api/. "$OUT/api/"
-rm -rf "$OUT/api/deploy_backups"; rm -f "$OUT/api/deploy_key.php" "$OUT/api/admins.php" "$OUT/api/config.php" "$OUT/api/ai_key.php" "$OUT"/api/*.sqlite "$OUT"/api/*.bak
+rm -rf "$OUT/api/deploy_backups"; rm -f "$OUT/api/deploy_key.php" "$OUT/api/admins.php" "$OUT/api/config.php" "$OUT/api/ai_key.php" "$OUT"/api/*.sqlite "$OUT"/api/*.bak "$OUT"/api/mail.log
 cp server/uploads/.htaccess "$OUT/uploads/"
 
 # Sito: niente elenco dei file, cache lunga per gli asset

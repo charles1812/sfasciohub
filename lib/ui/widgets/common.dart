@@ -324,6 +324,78 @@ void showError(BuildContext context, Object e) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), behavior: SnackBarBehavior.floating));
 }
 
+/// "Password dimenticata?": chiede l'email e fa arrivare il link per sceglierne una nuova.
+Future<void> askPasswordReset(BuildContext context, String email) async {
+  final ctrl = TextEditingController(text: email.trim());
+  final sent = await showDialog<bool>(
+    context: context,
+    builder: (c) {
+      var busy = false;
+      return StatefulBuilder(builder: (c, set) => AlertDialog(
+        title: const Text('Password dimenticata?'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('Scrivi la tua email: ti mandiamo un link per scegliere una nuova password.'),
+          const SizedBox(height: 14),
+          TextField(
+            controller: ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Annulla')),
+          FilledButton(
+            onPressed: busy
+                ? null
+                : () async {
+                    set(() => busy = true);
+                    try {
+                      await Repository.instance.forgotPassword(ctrl.text);
+                      if (c.mounted) Navigator.pop(c, true);
+                    } catch (e) {
+                      set(() => busy = false);
+                      if (c.mounted) showError(c, e);
+                    }
+                  },
+            child: Text(busy ? 'Invio…' : 'Mandami il link'),
+          ),
+        ],
+      ));
+    },
+  );
+  if (sent == true && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 8),
+      content: Text("Se l'email è registrata, tra poco ti arriva il link (guarda anche nello spam). Vale un'ora."),
+    ));
+  }
+}
+
+/// Avviso in alto nella pagina, con un'azione facoltativa.
+class NoticeBar extends StatelessWidget {
+  const NoticeBar({super.key, required this.icon, required this.text, this.color = Brand.gold, this.actions = const []});
+  final IconData icon;
+  final String text;
+  final Color color;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        color: color.withValues(alpha: 0.14),
+        padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+        child: Row(children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w600))),
+          ...actions,
+        ]),
+      );
+}
+
 /// Larghezza massima del contenuto su schermi grandi (desktop / web).
 class Constrained extends StatelessWidget {
   const Constrained({super.key, required this.child, this.maxWidth = 1100});

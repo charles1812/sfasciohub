@@ -163,6 +163,7 @@ function admin_yards(): array
         'phone' => $y['phone'],
         'owner_email' => $y['owner_email'],
         'published' => (bool) $y['published'],
+        'approved' => (bool) $y['approved'],
         'vehicles' => (int) $y['vehicles'],
         'ai_daily_limit' => $y['ai_daily_limit'] === null ? null : (int) $y['ai_daily_limit'],
         'created_at' => $y['created_at'],
@@ -184,6 +185,9 @@ function admin_update_yard(string $id): array
     if (array_key_exists('published', $b)) {
         db()->prepare('UPDATE yards SET published = ? WHERE id = ?')->execute([$b['published'] ? 1 : 0, $id]);
     }
+    if (array_key_exists('approved', $b)) {
+        db()->prepare('UPDATE yards SET approved = ? WHERE id = ?')->execute([$b['approved'] ? 1 : 0, $id]);
+    }
     return ['ok' => true];
 }
 
@@ -192,7 +196,7 @@ function admin_users(): array
     $me = require_admin();
     $costs = ai_costs_by('user_id');
     $admins = admin_emails();
-    $rows = db()->query('SELECT u.id, u.email, u.is_admin, u.disabled, u.created_at,
+    $rows = db()->query('SELECT u.id, u.email, u.is_admin, u.disabled, u.email_verified, u.created_at,
                                 (SELECT y.name FROM yard_members m JOIN yards y ON y.id = m.yard_id WHERE m.user_id = u.id ORDER BY y.created_at LIMIT 1) yard_name,
                                 (SELECT m.yard_id FROM yard_members m WHERE m.user_id = u.id LIMIT 1) yard_id,
                                 (SELECT MAX(t.created_at) FROM auth_tokens t WHERE t.user_id = u.id) last_login
@@ -203,6 +207,7 @@ function admin_users(): array
         'is_admin' => $u['is_admin'] || in_array($u['email'], $admins, true),
         'admin_from_file' => in_array($u['email'], $admins, true),
         'disabled' => (bool) $u['disabled'],
+        'email_verified' => (bool) $u['email_verified'],
         'is_me' => $u['id'] === $me['id'],
         'created_at' => $u['created_at'],
         'last_login' => $u['last_login'],

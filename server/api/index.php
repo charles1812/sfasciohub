@@ -13,6 +13,7 @@ require __DIR__ . '/lib/admin.php';
 require __DIR__ . '/lib/parts.php';
 require __DIR__ . '/lib/events.php';
 require __DIR__ . '/lib/bi.php';
+require __DIR__ . '/lib/account.php';
 
 try {
     cors();
@@ -31,11 +32,14 @@ try {
         ['GET', '/yards/{id}', fn($id) => public_yard($id)],
         ['GET', '/counts', fn() => public_counts()],
         ['POST', '/events', fn() => track_event()],
+        ['POST', '/errors', fn() => report_error()],
 
         ['POST', '/auth/signup', fn() => auth_signup()],
         ['POST', '/auth/login', fn() => auth_login()],
         ['POST', '/auth/logout', fn() => auth_logout()],
         ['GET', '/auth/me', fn() => auth_me()],
+        ['POST', '/auth/forgot', fn() => auth_forgot()],
+        ['POST', '/me/verify/resend', fn() => resend_verify()],
 
         ['GET', '/me/yard', fn() => ['yard' => my_yard()]],
         ['POST', '/me/yard', fn() => create_my_yard()],
@@ -61,6 +65,8 @@ try {
         ['GET', '/admin/users', fn() => admin_users()],
         ['POST', '/admin/users', fn() => admin_create_user()],
         ['PUT', '/admin/users/{id}', fn($id) => admin_update_user($id)],
+        ['GET', '/admin/errors', fn() => admin_errors()],
+        ['DELETE', '/admin/errors/{id}', fn($id) => admin_delete_error($id)],
     ];
 
     $knownPath = false;
@@ -78,6 +84,9 @@ try {
     send_json(['error' => $e->getMessage()], $e->status);
 } catch (Throwable $e) {
     error_log('[sfasciohub] ' . $e);
+    $route = ($method ?? '') . ' ' . ($path ?? '');
+    record_error('server', "$route · " . get_class($e) . ': ' . $e->getMessage(),
+        $e->getFile() . ':' . $e->getLine() . "\n" . $e->getTraceAsString(), '', 'php');
     $debug = is_file(__DIR__ . '/config.php') && (config()['debug'] ?? false);
     send_json(['error' => 'Errore del server.' . ($debug ? ' ' . $e->getMessage() : '')], 500);
 }

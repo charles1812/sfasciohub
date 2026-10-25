@@ -26,6 +26,7 @@ function yard_out(array $y): array
         'lat' => $y['lat'] === null ? null : (float) $y['lat'],
         'lng' => $y['lng'] === null ? null : (float) $y['lng'],
         'published' => (bool) $y['published'],
+        'approved' => (bool) ($y['approved'] ?? true),
     ];
 }
 
@@ -81,7 +82,7 @@ function vehicles_out(array $rows): array
 // ---------------------------------------------------------------------------
 
 const PUBLIC_VEHICLES = "SELECT v.* FROM vehicles v JOIN yards y ON y.id = v.yard_id
-                         WHERE v.published = 1 AND v.status <> 'gone' AND y.published = 1";
+                         WHERE v.published = 1 AND v.status <> 'gone' AND y.published = 1 AND y.approved = 1";
 
 function public_vehicles(): array
 {
@@ -133,12 +134,12 @@ function public_vehicle(string $id): array
 
 function public_yards(): array
 {
-    return array_map('yard_out', db()->query('SELECT * FROM yards WHERE published = 1 ORDER BY name')->fetchAll());
+    return array_map('yard_out', db()->query('SELECT * FROM yards WHERE published = 1 AND approved = 1 ORDER BY name')->fetchAll());
 }
 
 function public_yard(string $id): array
 {
-    $st = db()->prepare('SELECT * FROM yards WHERE id = ? AND published = 1');
+    $st = db()->prepare('SELECT * FROM yards WHERE id = ? AND published = 1 AND approved = 1');
     $st->execute([$id]);
     return yard_out($st->fetch() ?: throw new HttpError(404, 'Sfasciacarrozze non trovato.'));
 }
@@ -216,11 +217,16 @@ function create_my_yard(): array
     $id = uuid();
     $pdo = db();
     $pdo->beginTransaction();
-    $pdo->prepare('INSERT INTO yards (id, owner_id, name, city, province, address, phone, whatsapp, email, hours, description, lat, lng, published, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        ->execute([$id, $u['id'], ...array_values($f), now()]);
+    // i piazzali nuovi restano nascosti ai clienti finché un amministratore non li approva
+    $approved = $u['is_admin'] ? 1 : 0;
+    $pdo->prepare('INSERT INTO yards (id, owner_id, name, city, province, address, phone, whatsapp, email, hours, description, lat, lng, published, approved, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        ->execute([$id, $u['id'], ...array_values($f), $approved, now()]);
     $pdo->prepare("INSERT INTO yard_members (yard_id, user_id, role) VALUES (?, ?, 'owner')")->execute([$id, $u['id']]);
     $pdo->commit();
+    if (!$approved) {
+        notify_new_yard($f['name'], $f['city'], $u['email']);
+    }
     return yard_out(require_my_yard($u));
 }
 

@@ -111,7 +111,7 @@ function ai_usage_table_sql(bool $sqlite): string
         )$engine";
 }
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 /**
  * Modifiche allo schema per i server già installati. Ogni versione gira una volta sola
@@ -127,6 +127,7 @@ function migrate_schema(PDO $pdo, bool $sqlite): void
     $bool = $sqlite ? 'INTEGER' : 'TINYINT(1)';
     $engine = $sqlite ? '' : ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
     $dt = $sqlite ? 'TEXT' : 'DATETIME';
+    $text = 'TEXT';
     $steps = [
         2 => [
             ai_usage_table_sql($sqlite),
@@ -172,6 +173,33 @@ function migrate_schema(PDO $pdo, bool $sqlite): void
         ],
         6 => [
             "ALTER TABLE events ADD COLUMN text VARCHAR(120) NOT NULL DEFAULT ''",
+        ],
+        // piazzali da approvare, email confermate, link via email, errori delle app
+        // (chi c'era già resta approvato e confermato)
+        7 => [
+            "ALTER TABLE yards ADD COLUMN approved $bool NOT NULL DEFAULT 1",
+            "ALTER TABLE users ADD COLUMN email_verified $bool NOT NULL DEFAULT 1",
+            "CREATE TABLE IF NOT EXISTS email_tokens (
+                token_hash CHAR(64) NOT NULL PRIMARY KEY,
+                user_id CHAR(36) NOT NULL,
+                purpose VARCHAR(10) NOT NULL,
+                expires_at $dt NOT NULL,
+                created_at $dt NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )$engine",
+            'CREATE TABLE IF NOT EXISTS app_errors (
+                id ' . ($sqlite ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'BIGINT AUTO_INCREMENT PRIMARY KEY') . ",
+                fingerprint CHAR(16) NOT NULL UNIQUE,
+                source VARCHAR(20) NOT NULL,
+                version VARCHAR(20) NOT NULL DEFAULT '',
+                platform VARCHAR(20) NOT NULL DEFAULT '',
+                message VARCHAR(500) NOT NULL,
+                stack $text,
+                user_email VARCHAR(190) NOT NULL DEFAULT '',
+                count INT NOT NULL DEFAULT 1,
+                first_at $dt NOT NULL,
+                last_at $dt NOT NULL
+            )$engine",
         ],
     ];
     foreach ($steps as $v => $sqls) {

@@ -6,9 +6,12 @@ import 'models.dart';
 import 'php_repository.dart';
 
 class AppUser {
-  const AppUser({required this.id, required this.email});
+  const AppUser({required this.id, required this.email, this.emailVerified = true});
   final String id;
   final String email;
+
+  /// false finché non apre il link di conferma arrivato per email.
+  final bool emailVerified;
 }
 
 class RepoException implements Exception {
@@ -67,6 +70,18 @@ abstract class Repository extends ChangeNotifier {
   /// Ritorna true se serve confermare l'email prima di entrare.
   Future<bool> signUp(String email, String password);
   Future<void> signOut();
+
+  /// Manda per email il link per scegliere una nuova password.
+  Future<void> forgotPassword(String email) async => throw RepoException('Disponibile solo con il server.');
+
+  /// Rimanda l'email con il link di conferma dell'indirizzo.
+  Future<void> resendVerification() async {}
+
+  /// Rilegge l'account dal server (per esempio dopo aver confermato l'email).
+  Future<void> refreshUser() async {}
+
+  /// Segnala al server un errore dell'app (lo vedi nell'app Admin, scheda Errori).
+  void reportError(Map<String, String> error) {}
 
   // ---- gestione (utente loggato) ----
   Future<Yard?> myYard();

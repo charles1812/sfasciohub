@@ -171,6 +171,11 @@ class _AuthPageState extends State<AuthPage> {
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                             : Text(_signUp ? 'Crea account' : 'Accedi'),
                       ),
+                      if (!_signUp && !local)
+                        TextButton(
+                          onPressed: () => askPasswordReset(context, _email.text),
+                          child: const Text('Password dimenticata?'),
+                        ),
                       const SizedBox(height: 8),
                       TextButton(
                         onPressed: () => setState(() => _signUp = !_signUp),
@@ -190,6 +195,59 @@ class _AuthPageState extends State<AuthPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Chiede di confermare l'email finché l'account non l'ha fatto.
+class _EmailNotice extends StatefulWidget {
+  const _EmailNotice();
+  @override
+  State<_EmailNotice> createState() => _EmailNoticeState();
+}
+
+class _EmailNoticeState extends State<_EmailNotice> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function() f, String done) async {
+    setState(() => _busy = true);
+    try {
+      await f();
+      if (mounted && done.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text(done)));
+      }
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = Repository.instance;
+    final u = repo.currentUser;
+    if (u == null || u.emailVerified || repo.isDemo) return const SizedBox.shrink();
+    return NoticeBar(
+      icon: Icons.mark_email_unread_outlined,
+      text: 'Conferma la tua email: ti abbiamo mandato un link a ${u.email}.',
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => _run(repo.resendVerification, 'Email inviata di nuovo. Guarda anche nello spam.'),
+          child: const Text('Rinvia'),
+        ),
+        TextButton(
+          onPressed: _busy
+              ? null
+              : () => _run(() async {
+                    await repo.refreshUser();
+                    if (repo.currentUser?.emailVerified == false) {
+                      throw RepoException("Non risulta ancora confermata: apri il link nell'email e poi tocca di nuovo Fatto.");
+                    }
+                  }, ''),
+          child: const Text('Fatto'),
+        ),
+      ],
     );
   }
 }
@@ -270,6 +328,13 @@ class _YardHomeState extends State<YardHome> {
       ),
       body: Column(children: [
         if (Repository.instance.isDemo) const DemoBanner(text: 'Demo: le modifiche restano su questo dispositivo. Nel browser le vedi anche sul sito pubblico.'),
+        const _EmailNotice(),
+        if (!widget.yard.approved)
+          const NoticeBar(
+            icon: Icons.hourglass_top,
+            text: 'Il piazzale è in attesa di approvazione. Puoi già caricare le auto: '
+                'i clienti le vedranno appena lo approviamo (di solito entro un giorno).',
+          ),
         Expanded(
           child: wide
               ? Row(children: [

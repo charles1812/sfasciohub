@@ -8,3 +8,4 @@ api/*.sqlite
 uploads/*
 !uploads/.htaccess
 !uploads/.gitkeep
+api/mail.log

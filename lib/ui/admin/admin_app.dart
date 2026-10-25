@@ -50,15 +50,12 @@ class _Login extends StatefulWidget {
 class _LoginState extends State<_Login> {
   final _email = TextEditingController();
   final _password = TextEditingController();
-  bool _signUp = false;
   bool _busy = false;
 
   Future<void> _submit() async {
     setState(() => _busy = true);
     try {
-      _signUp
-          ? await _repo.signUp(_email.text, _password.text)
-          : await _repo.signIn(_email.text, _password.text);
+      await _repo.signIn(_email.text, _password.text);
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -99,22 +96,15 @@ class _LoginState extends State<_Login> {
                         obscureText: true,
                         autofillHints: const [AutofillHints.password],
                         onSubmitted: (_) => _submit(),
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          helperText: _signUp ? 'Almeno 8 caratteri' : null,
-                        ),
+                        decoration: const InputDecoration(labelText: 'Password', prefixIcon: Icon(Icons.lock_outline)),
                       ),
                       const SizedBox(height: 18),
-                      FilledButton(onPressed: _busy ? null : _submit, child: Text(_signUp ? 'Crea il mio account' : 'Accedi')),
+                      FilledButton(onPressed: _busy ? null : _submit, child: const Text('Accedi')),
                       const SizedBox(height: 8),
                       TextButton(
-                        onPressed: () => setState(() => _signUp = !_signUp),
-                        child: Text(_signUp ? 'Ho già un account' : 'Primo accesso? Crea il tuo account'),
+                        onPressed: () => askPasswordReset(context, _email.text),
+                        child: const Text('Password dimenticata?'),
                       ),
-                      if (_signUp)
-                        Text("Poi scrivi la tua email in api/admins.php sul server: solo così l'account diventa admin.",
-                            textAlign: TextAlign.center, style: t.bodySmall),
                     ]),
                   ),
                 ),
@@ -182,6 +172,7 @@ class _AdminHomeState extends State<_AdminHome> {
       _Users(key: ValueKey('u$_reload')),
       _Yards(key: ValueKey('y$_reload')),
       _Requests(key: ValueKey('r$_reload')),
+      _Errors(key: ValueKey('e$_reload')),
     ];
     return Scaffold(
       appBar: AppBar(
@@ -218,6 +209,7 @@ class _AdminHomeState extends State<_AdminHome> {
           NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Account'),
           NavigationDestination(icon: Icon(Icons.storefront_outlined), selectedIcon: Icon(Icons.storefront), label: 'Piazzali'),
           NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: 'Richieste'),
+          NavigationDestination(icon: Icon(Icons.bug_report_outlined), selectedIcon: Icon(Icons.bug_report), label: 'Errori'),
         ],
       ),
     );
@@ -297,6 +289,7 @@ class _UsersState extends State<_Users> {
                       (u['yard_name'] as String?) ?? 'nessun piazzale',
                       if (u['is_admin'] == true) 'admin',
                       if (u['disabled'] == true) 'SOSPESO',
+                      if (u['email_verified'] == false) 'email da confermare',
                       'ultimo accesso ${_date(u['last_login'] as String?)}',
                     ].join(' · ')),
                     trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -516,26 +509,42 @@ class _Yards extends StatelessWidget {
     return _Loader(
       route: '/admin/yards',
       builder: (context, d, reload) {
-        final yards = (d as List).cast<Map>();
+        // quelli da approvare per primi
+        final yards = (d as List).cast<Map>().toList()
+          ..sort((a, b) => (a['approved'] == false ? 0 : 1).compareTo(b['approved'] == false ? 0 : 1));
+        final pending = yards.where((y) => y['approved'] == false).length;
         return ListView(padding: const EdgeInsets.all(12), children: [
           Constrained(
             maxWidth: 900,
             child: Column(children: [
+              if (pending > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: NoticeBar(
+                    icon: Icons.hourglass_top,
+                    text: pending == 1
+                        ? "1 piazzale aspetta l'approvazione: toccalo per approvarlo."
+                        : "$pending piazzali aspettano l'approvazione: toccali per approvarli.",
+                  ),
+                ),
               for (final y in yards)
                 Card(
                   child: ListTile(
                     onTap: () => _edit(context, y, reload),
                     leading: CircleAvatar(
-                      backgroundColor: y['published'] == true ? Brand.okSoft : Brand.damageSoft,
-                      child: Icon(Icons.storefront, color: y['published'] == true ? Brand.ok : Brand.damage),
+                      backgroundColor: y['approved'] == false ? Brand.goldSoft : y['published'] == true ? Brand.okSoft : Brand.damageSoft,
+                      child: Icon(y['approved'] == false ? Icons.hourglass_top : Icons.storefront,
+                          color: y['approved'] == false ? Brand.gold : y['published'] == true ? Brand.ok : Brand.damage),
                     ),
                     title: Text(y['name'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text([
                       [y['city'], y['province']].where((s) => (s as String? ?? '').isNotEmpty).join(' '),
                       '${y['vehicles']} veicoli',
                       'AI ${y['ai_daily_limit'] ?? 'predef.'}/giorno',
+                      if (y['approved'] == false) 'DA APPROVARE',
                       if (y['published'] != true) 'NASCOSTO',
                       y['owner_email'] ?? '',
+                      'dal ${_date(y['created_at'] as String?)}',
                     ].where((s) => s.toString().isNotEmpty).join(' · ')),
                     trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
                       Text(usd((y['ai'] as Map)['cost_month_usd'] as num), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
@@ -553,6 +562,7 @@ class _Yards extends StatelessWidget {
   void _edit(BuildContext context, Map y, VoidCallback reload) {
     final limit = TextEditingController(text: y['ai_daily_limit']?.toString() ?? '');
     var published = y['published'] == true;
+    var approved = y['approved'] != false;
     final ai = y['ai'] as Map;
     showDialog(
       context: context,
@@ -570,9 +580,17 @@ class _Yards extends StatelessWidget {
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
+            value: approved,
+            onChanged: (b) => set(() => approved = b),
+            title: const Text('Approvato'),
+            subtitle: const Text('Finché non lo approvi, i clienti non vedono il piazzale né le sue auto'),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
             value: published,
             onChanged: (b) => set(() => published = b),
             title: const Text('Visibile sul sito'),
+            subtitle: const Text('Lo decide anche il piazzale dalla sua app'),
           ),
         ]),
         actions: [
@@ -583,6 +601,7 @@ class _Yards extends StatelessWidget {
                 await _repo.request('PUT', '/admin/yards/${y['id']}', json: {
                   'ai_daily_limit': int.tryParse(limit.text),
                   'published': published,
+                  'approved': approved,
                 });
                 if (c.mounted) Navigator.pop(c);
                 reload();
@@ -702,6 +721,104 @@ class _RequestsState extends State<_Requests> {
           if (((r['error'] as String?) ?? '').isNotEmpty) 'Errore: ${r['error']}',
         ].join('\n')),
         actions: [FilledButton(onPressed: () => Navigator.pop(c), child: const Text('Chiudi'))],
+      ),
+    );
+  }
+}
+
+/// Errori delle app (sui telefoni e nel browser) e del server, raggruppati: lo stesso errore aumenta il contatore.
+class _Errors extends StatelessWidget {
+  const _Errors({super.key});
+
+  static const _apps = {'gestione': 'Gestione', 'esplora': 'SfascioHub', 'admin': 'Admin', 'server': 'Server'};
+
+  static String _when(String? s) => s == null || s.length < 16 ? '—' : '${_date(s)} ${s.substring(11, 16)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return _Loader(
+      route: '/admin/errors',
+      builder: (context, d, reload) {
+        final rows = (d as List).cast<Map>();
+        Future<void> remove(String id) async {
+          try {
+            await _repo.request('DELETE', '/admin/errors/$id');
+            reload();
+          } catch (e) {
+            if (context.mounted) showError(context, e);
+          }
+        }
+
+        return ListView(padding: const EdgeInsets.all(12), children: [
+          Constrained(
+            maxWidth: 900,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                Expanded(child: Text(
+                  rows.isEmpty ? 'Nessun errore. Tutto liscio.' : 'Errori delle app e del server, i più recenti in alto.',
+                  style: t.bodyMedium,
+                )),
+                if (rows.isNotEmpty)
+                  TextButton.icon(onPressed: () => remove('all'), icon: const Icon(Icons.done_all), label: const Text('Tutti risolti')),
+              ]),
+              const SizedBox(height: 8),
+              for (final e in rows)
+                Card(
+                  child: ListTile(
+                    onTap: () => _detail(context, e, () => remove('${e['id']}')),
+                    leading: CircleAvatar(
+                      backgroundColor: Brand.damageSoft,
+                      child: Text('${e['count']}', style: const TextStyle(color: Brand.damage, fontWeight: FontWeight.w800)),
+                    ),
+                    title: Text(e['message'] as String, maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text([
+                      _apps[e['source']] ?? e['source'],
+                      if ((e['version'] as String).isNotEmpty) 'v${e['version']}',
+                      e['platform'],
+                      'ultima ${_when(e['last_at'] as String?)}',
+                      if ((e['user_email'] as String).isNotEmpty) e['user_email'],
+                    ].where((s) => s.toString().isNotEmpty).join(' · ')),
+                  ),
+                ),
+            ]),
+          ),
+        ]);
+      },
+    );
+  }
+
+  void _detail(BuildContext context, Map e, VoidCallback resolve) {
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('${_apps[e['source']] ?? e['source']} · ${e['count']} volte'),
+        content: SizedBox(
+          width: 600,
+          child: SingleChildScrollView(
+            child: SelectableText([
+              e['message'],
+              '',
+              'Versione: ${(e['version'] as String).isEmpty ? '—' : e['version']} · ${e['platform']}',
+              'Prima volta: ${_when(e['first_at'] as String?)} (UTC)',
+              'Ultima volta: ${_when(e['last_at'] as String?)} (UTC)',
+              if ((e['user_email'] as String).isNotEmpty) 'Account: ${e['user_email']}',
+              '',
+              e['stack'],
+            ].join('\n'), style: const TextStyle(fontSize: 12.5)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Chiudi')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(c);
+              resolve();
+            },
+            child: const Text('Risolto'),
+          ),
+        ],
       ),
     );
   }

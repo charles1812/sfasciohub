@@ -108,6 +108,7 @@ class Yard {
     this.lat,
     this.lng,
     this.published = true,
+    this.approved = true,
   });
 
   final String id;
@@ -124,6 +125,9 @@ class Yard {
   double? lat;
   double? lng;
   bool published;
+
+  /// I piazzali nuovi restano nascosti ai clienti finché un amministratore non li approva.
+  final bool approved;
 
   String get place => [city, if (province.isNotEmpty) '($province)'].where((s) => s.isNotEmpty).join(' ');
 
@@ -142,6 +146,7 @@ class Yard {
         lat: (j['lat'] as num?)?.toDouble(),
         lng: (j['lng'] as num?)?.toDouble(),
         published: (j['published'] ?? true) as bool,
+        approved: (j['approved'] ?? true) as bool,
       );
 
   Map<String, dynamic> toJson() => {

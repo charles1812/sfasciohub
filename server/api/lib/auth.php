@@ -23,7 +23,7 @@ function request_token(): ?string
     return preg_match('/^[a-f0-9]{64}$/i', $x) ? strtolower($x) : null;
 }
 
-/** @return array{id:string,email:string,is_admin:int}|null */
+/** @return array{id:string,email:string,is_admin:int,email_verified:int}|null */
 function current_user(): ?array
 {
     static $user = false;
@@ -31,7 +31,7 @@ function current_user(): ?array
         $user = null;
         $token = request_token();
         if ($token !== null) {
-            $st = db()->prepare('SELECT u.id, u.email, u.is_admin FROM auth_tokens t JOIN users u ON u.id = t.user_id
+            $st = db()->prepare('SELECT u.id, u.email, u.is_admin, u.email_verified FROM auth_tokens t JOIN users u ON u.id = t.user_id
                                  WHERE t.token_hash = ? AND t.expires_at > ? AND u.disabled = 0');
             $st->execute([hash('sha256', $token), now()]);
             $user = $st->fetch() ?: null;
@@ -75,15 +75,7 @@ function issue_token(string $userId): string
 
 function check_login_rate(): void
 {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '?';
-    $since = gmdate('Y-m-d H:i:s', time() - 900);
-    db()->prepare('DELETE FROM login_attempts WHERE attempted_at < ?')->execute([$since]);
-    $st = db()->prepare('SELECT COUNT(*) FROM login_attempts WHERE ip = ?');
-    $st->execute([$ip]);
-    if ((int) $st->fetchColumn() >= LOGIN_MAX_ATTEMPTS) {
-        throw new HttpError(429, 'Troppi tentativi. Riprova tra qualche minuto.');
-    }
-    db()->prepare('INSERT INTO login_attempts (ip, attempted_at) VALUES (?, ?)')->execute([$ip, now()]);
+    rate_limit('login', LOGIN_MAX_ATTEMPTS, 900);
 }
 
 function normalize_email(array $b): string
@@ -110,9 +102,10 @@ function auth_signup(): array
         throw new HttpError(409, 'Esiste già un account con questa email.');
     }
     $id = uuid();
-    db()->prepare('INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)')
+    db()->prepare('INSERT INTO users (id, email, password_hash, email_verified, created_at) VALUES (?, ?, ?, 0, ?)')
         ->execute([$id, $email, password_hash($password, PASSWORD_DEFAULT), now()]);
-    return ['token' => issue_token($id), 'user' => ['id' => $id, 'email' => $email]];
+    send_verify_email($id, $email);
+    return ['token' => issue_token($id), 'user' => ['id' => $id, 'email' => $email, 'email_verified' => false]];
 }
 
 function auth_login(): array
@@ -120,7 +113,7 @@ function auth_login(): array
     $b = body();
     $email = normalize_email($b);
     check_login_rate();
-    $st = db()->prepare('SELECT id, email, password_hash, disabled FROM users WHERE email = ?');
+    $st = db()->prepare('SELECT id, email, password_hash, disabled, email_verified FROM users WHERE email = ?');
     $st->execute([$email]);
     $u = $st->fetch();
     if (!$u || !password_verify((string) ($b['password'] ?? ''), $u['password_hash'])) {
@@ -133,7 +126,7 @@ function auth_login(): array
         db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
             ->execute([password_hash((string) $b['password'], PASSWORD_DEFAULT), $u['id']]);
     }
-    return ['token' => issue_token($u['id']), 'user' => ['id' => $u['id'], 'email' => $u['email']]];
+    return ['token' => issue_token($u['id']), 'user' => ['id' => $u['id'], 'email' => $u['email'], 'email_verified' => (bool) $u['email_verified']]];
 }
 
 function auth_logout(): array
@@ -148,5 +141,6 @@ function auth_logout(): array
 function auth_me(): array
 {
     $u = require_user();
-    return ['user' => ['id' => $u['id'], 'email' => $u['email'], 'is_admin' => (bool) $u['is_admin']]];
+    return ['user' => ['id' => $u['id'], 'email' => $u['email'], 'is_admin' => (bool) $u['is_admin'],
+        'email_verified' => (bool) $u['email_verified']]];
 }

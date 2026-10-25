@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Compila le tre app Android e la Gestione per Windows, scrive version.json e pubblica la release su GitHub.
+# Le app installate la trovano da sole (controllano version.json dell'ultima release).
+#
+#   tool/release.sh "note della versione"
+#
+# Versione e numero di build si prendono da pubspec.yaml (version: 1.7.0+10).
+# Gli APK si firmano con la chiave in ~/.sfasciohub/ (vedi android/app/build.gradle.kts).
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+NOTES="${1:?Scrivi le note della versione}"
+SITE="${SFASCIOHUB_SITE:-https://white-ferret-597873.hostingersite.com/sfasciohub/}"
+REPO="charles1812/sfasciohub"
+VER=$(sed -n 's/^version: \([0-9.]*\)+\([0-9]*\).*/\1/p' pubspec.yaml)
+BUILD=$(sed -n 's/^version: \([0-9.]*\)+\([0-9]*\).*/\2/p' pubspec.yaml)
+[[ -f "$HOME/.sfasciohub/release.properties" ]] || { echo "Manca la chiave di firma in ~/.sfasciohub/" >&2; exit 1; }
+D=(--dart-define=API_URL="${SITE}api/" --dart-define=SITE_URL="$SITE")
+OUT=build/release
+mkdir -p "$OUT"
+
+apk() { # flavor, entry point, nome del file
+  flutter build apk --release --flavor "$1" -t "lib/$2.dart" "${D[@]}" | grep -q "Built" || { echo "Build $1 non riuscita" >&2; exit 1; }
+  cp "build/app/outputs/flutter-apk/app-$1-release.apk" "$OUT/$3"
+  echo "$1 ok"
+}
+apk admin main_admin SfascioHub-Admin.apk
+apk gestione main_yard SfascioHub-Gestione.apk
+apk explore main_explore SfascioHub.apk
+
+flutter build windows --release -t lib/main_yard.dart "${D[@]}" | grep -q "Built" || { echo "Build Windows non riuscita" >&2; exit 1; }
+powershell -NoProfile -Command "Compress-Archive -Path 'build/windows/x64/runner/Release/*' -DestinationPath '$OUT/SfascioHub-Gestione-Windows.zip' -Force"
+echo "windows ok"
+
+URL="https://github.com/$REPO/releases/download/v$VER"
+python - "$OUT/version.json" "$VER" "$BUILD" "$NOTES" "$URL" <<'PY'
+import json, sys
+out, ver, build, notes, url = sys.argv[1:]
+json.dump({'version': ver, 'build': int(build), 'notes': notes, 'apks': {
+    'it.sfasciohub.gestione': f'{url}/SfascioHub-Gestione.apk',
+    'it.sfasciohub.esplora': f'{url}/SfascioHub.apk',
+    'it.sfasciohub.admin': f'{url}/SfascioHub-Admin.apk',
+}}, open(out, 'w', encoding='utf-8'), indent=2, ensure_ascii=False)
+PY
+
+gh release create "v$VER" --repo "$REPO" --title "SfascioHub $VER" --notes "$NOTES" \
+  "$OUT/SfascioHub.apk" "$OUT/SfascioHub-Gestione.apk" "$OUT/SfascioHub-Admin.apk" \
+  "$OUT/SfascioHub-Gestione-Windows.zip" "$OUT/version.json"
+curl -sL "https://github.com/$REPO/releases/latest/download/version.json" | grep '"build"'
