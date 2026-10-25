@@ -7,6 +7,7 @@ import '../../data/repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/updater.dart';
+import 'requests_tab.dart';
 import 'stats_tab.dart';
 import 'vehicle_editor.dart';
 import 'yard_profile.dart';
@@ -267,6 +268,8 @@ class _YardHomeState extends State<YardHome> {
   int _tab = 0;
   final _vehiclesKey = GlobalKey<_VehiclesTabState>();
   final _statsKey = GlobalKey<StatsTabState>();
+  final _requestsKey = GlobalKey<RequestsTabState>();
+  int _openRequests = 0;
 
   Future<void> _newVehicle() async {
     final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
@@ -281,17 +284,22 @@ class _YardHomeState extends State<YardHome> {
     final wide = MediaQuery.sizeOf(context).width >= 840;
     final body = IndexedStack(index: _tab, children: [
       VehiclesTab(key: _vehiclesKey, yard: widget.yard),
+      RequestsTab(key: _requestsKey, onOpenCount: (n) {
+        if (mounted && n != _openRequests) setState(() => _openRequests = n);
+      }),
       StatsTab(key: _statsKey),
       YardProfilePage(yard: widget.yard, onSaved: widget.onYardChanged),
     ]);
     const dests = [
       (Icons.directions_car_outlined, Icons.directions_car, 'Veicoli'),
+      (Icons.mark_chat_unread_outlined, Icons.mark_chat_unread, 'Richieste'),
       (Icons.insights_outlined, Icons.insights, 'Dati'),
       (Icons.storefront_outlined, Icons.storefront, 'Il mio piazzale'),
     ];
     void select(int i) {
       setState(() => _tab = i);
-      if (i == 1) _statsKey.currentState?.reload();
+      if (i == 1) _requestsKey.currentState?.reload();
+      if (i == 2) _statsKey.currentState?.reload();
     }
     return Scaffold(
       appBar: AppBar(
@@ -347,7 +355,8 @@ class _YardHomeState extends State<YardHome> {
                       child: FloatingActionButton(onPressed: _newVehicle, tooltip: 'Nuovo veicolo', child: const Icon(Icons.add_a_photo)),
                     ),
                     destinations: [
-                      for (final d in dests) NavigationRailDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: Text(d.$3)),
+                      for (final (i, d) in dests.indexed)
+                        NavigationRailDestination(icon: _badge(i, Icon(d.$1)), selectedIcon: _badge(i, Icon(d.$2)), label: Text(d.$3)),
                     ],
                   ),
                   const VerticalDivider(width: 1),
@@ -364,10 +373,17 @@ class _YardHomeState extends State<YardHome> {
           : NavigationBar(
               selectedIndex: _tab,
               onDestinationSelected: select,
-              destinations: [for (final d in dests) NavigationDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: d.$3)],
+              destinations: [
+                for (final (i, d) in dests.indexed)
+                  NavigationDestination(icon: _badge(i, Icon(d.$1)), selectedIcon: _badge(i, Icon(d.$2)), label: d.$3),
+              ],
             ),
     );
   }
+
+  /// Numerino sulla scheda Richieste: quanti clienti aspettano una risposta.
+  Widget _badge(int i, Widget icon) =>
+      i == 1 && _openRequests > 0 ? Badge(label: Text('$_openRequests'), backgroundColor: Brand.orange, child: icon) : icon;
 }
 
 class VehiclesTab extends StatefulWidget {

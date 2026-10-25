@@ -4,6 +4,7 @@ import '../../data/models.dart';
 import '../../data/repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import 'account.dart';
 
 /// Riquadro colorato sulla scheda dell'auto: invita a chiedere un pezzo al piazzale.
 class AskPartCard extends StatelessWidget {
@@ -63,6 +64,10 @@ class _AskSheetState extends State<_AskSheet> {
   late VehiclePart? _part = widget.preset;
   DamageZone? _zone;
   final _text = TextEditingController();
+  final _note = TextEditingController();
+  late final _name = TextEditingController(text: Repository.instance.currentUser?.name ?? '');
+  late final _phone = TextEditingController(text: Repository.instance.currentUser?.phone ?? '');
+  bool _busy = false;
 
   Vehicle get v => widget.vehicle;
 
@@ -87,10 +92,43 @@ class _AskSheetState extends State<_AskSheet> {
     Navigator.pop(context);
   }
 
+  /// Richiesta dentro l'app: il piazzale la vede nella Gestione e risponde, il cliente la ritrova nel Profilo.
+  Future<void> _sendInApp() async {
+    final repo = Repository.instance;
+    if (repo.currentUser == null) {
+      final ok = await requireLogin(context, reason: 'Accedi per chiedere il pezzo: la risposta del piazzale arriva qui e per email.');
+      if (!ok || !mounted) return;
+      _name.text = repo.currentUser?.name ?? '';
+      _phone.text = repo.currentUser?.phone ?? '';
+      setState(() {});
+      if (_name.text.trim().isEmpty || _phone.text.trim().isEmpty) return; // prima scrive nome e telefono
+    }
+    setState(() => _busy = true);
+    try {
+      final typed = _text.text.trim().isNotEmpty;
+      await repo.sendPartRequest(v, part: _what, partId: typed ? null : _part?.id, note: _note.text, name: _name.text, phone: _phone.text);
+      repo.track('part', vehicleId: v.id, partId: typed ? null : _part?.id, text: _what);
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context);
+      messenger.showSnackBar(SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 6),
+        content: Text('Richiesta mandata a ${v.yard!.name}. La risposta la trovi nel Profilo e ti arriva per email.'),
+      ));
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final y = v.yard!;
+    final logged = Repository.instance.currentUser != null;
+    final server = !Repository.instance.isDemo;
     final hasWa = y.whatsapp.replaceAll(RegExp(r'[^0-9]'), '').isNotEmpty;
     final suggestions = v.parts.where((p) => p.status != PartStatus.damaged).toList();
     final ready = _what.isNotEmpty;
@@ -136,7 +174,44 @@ class _AskSheetState extends State<_AskSheet> {
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(labelText: 'Oppure scrivi il pezzo', hintText: 'es. specchietto destro elettrico'),
           ),
+          if (server && logged) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _note,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(labelText: 'Nota per il piazzale (facoltativa)', hintText: 'es. mi serve entro venerdì'),
+            ),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: TextField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'Il tuo nome'),
+              )),
+              const SizedBox(width: 10),
+              Expanded(child: TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Telefono'),
+              )),
+            ]),
+          ],
           const SizedBox(height: 18),
+          if (server) ...[
+            FilledButton.icon(
+              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              onPressed: ready && !_busy ? _sendInApp : null,
+              icon: _busy
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.send),
+              label: Text(logged ? "Chiedi se c'è" : "Accedi e chiedi se c'è"),
+            ),
+            const SizedBox(height: 4),
+            Text("Il piazzale ti risponde nell'app (scheda Profilo) e per email.", textAlign: TextAlign.center, style: t.bodySmall),
+            const SizedBox(height: 14),
+            Text('Oppure contattalo subito', style: t.labelLarge?.copyWith(color: Brand.muted)),
+            const SizedBox(height: 8),
+          ],
           Row(children: [
             if (hasWa)
               Expanded(child: FilledButton.icon(

@@ -105,7 +105,7 @@ function auth_signup(): array
     db()->prepare('INSERT INTO users (id, email, password_hash, email_verified, created_at) VALUES (?, ?, ?, 0, ?)')
         ->execute([$id, $email, password_hash($password, PASSWORD_DEFAULT), now()]);
     send_verify_email($id, $email);
-    return ['token' => issue_token($id), 'user' => ['id' => $id, 'email' => $email, 'email_verified' => false]];
+    return ['token' => issue_token($id), 'user' => ['id' => $id, 'email' => $email, 'email_verified' => false, 'name' => '', 'phone' => '', 'has_yard' => false]];
 }
 
 function auth_login(): array
@@ -126,7 +126,7 @@ function auth_login(): array
         db()->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
             ->execute([password_hash((string) $b['password'], PASSWORD_DEFAULT), $u['id']]);
     }
-    return ['token' => issue_token($u['id']), 'user' => ['id' => $u['id'], 'email' => $u['email'], 'email_verified' => (bool) $u['email_verified']]];
+    return ['token' => issue_token($u['id']), 'user' => ['id' => $u['id'], 'email' => $u['email'], 'email_verified' => (bool) $u['email_verified']] + profile_out($u)];
 }
 
 function auth_logout(): array
@@ -142,5 +142,5 @@ function auth_me(): array
 {
     $u = require_user();
     return ['user' => ['id' => $u['id'], 'email' => $u['email'], 'is_admin' => (bool) $u['is_admin'],
-        'email_verified' => (bool) $u['email_verified']]];
+        'email_verified' => (bool) $u['email_verified']] + profile_out($u)];
 }

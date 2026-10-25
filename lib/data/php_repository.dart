@@ -36,8 +36,14 @@ class PhpRepository extends Repository {
     return r;
   }
 
-  static AppUser _userFrom(dynamic u) =>
-      AppUser(id: u['id'] as String, email: u['email'] as String, emailVerified: u['email_verified'] != false);
+  static AppUser _userFrom(dynamic u) => AppUser(
+        id: u['id'] as String,
+        email: u['email'] as String,
+        emailVerified: u['email_verified'] != false,
+        name: (u['name'] ?? '') as String,
+        phone: (u['phone'] ?? '') as String,
+        hasYard: u['has_yard'] == true,
+      );
 
   Future<void> _setToken(String? t) async {
     _token = t;
@@ -179,6 +185,48 @@ class PhpRepository extends Repository {
 
   @override
   void reportError(Map<String, String> error) => _call('POST', '/errors', json: error, timeout: const Duration(seconds: 10)).ignore();
+
+  // ---- profilo cliente, richieste, preferiti ----
+  @override
+  Future<void> updateProfile({required String name, required String phone}) async {
+    await _call('PUT', '/me/profile', json: {'name': name.trim(), 'phone': phone.trim()});
+    await refreshUser();
+  }
+
+  @override
+  Future<PartRequest> sendPartRequest(Vehicle v,
+      {required String part, String? partId, String note = '', required String name, required String phone}) async {
+    final r = PartRequest.fromJson(await _call('POST', '/requests', json: {
+      'vehicle_id': v.id,
+      'part': part.trim(),
+      'part_id': ?partId,
+      'note': note.trim(),
+      'name': name.trim(),
+      'phone': phone.trim(),
+    }) as Map<String, dynamic>);
+    refreshUser().ignore(); // nome e telefono ora sono nel profilo
+    return r;
+  }
+
+  List<PartRequest> _requests(dynamic list) =>
+      (list as List).map((j) => PartRequest.fromJson(j as Map<String, dynamic>)).toList();
+
+  @override
+  Future<List<PartRequest>> myRequests() async => _requests(await _call('GET', '/me/requests'));
+
+  @override
+  Future<List<PartRequest>> yardRequests() async => _requests(((await _call('GET', '/me/yard/requests')) as Map)['requests']);
+
+  @override
+  Future<PartRequest> replyRequest(PartRequest r, {required bool available, String price = '', String reply = ''}) async =>
+      PartRequest.fromJson(await _call('PUT', '/me/yard/requests/${r.id}',
+          json: {'status': available ? 'available' : 'unavailable', 'price': price.trim(), 'reply': reply.trim()}) as Map<String, dynamic>);
+
+  @override
+  Future<List<Vehicle>> favorites() async => _vehicles(await _call('GET', '/me/favorites'));
+
+  @override
+  Future<void> setFavorite(Vehicle v, bool on) async => _call(on ? 'PUT' : 'DELETE', '/me/favorites/${v.id}');
 
   // ---- gestione ----
   @override

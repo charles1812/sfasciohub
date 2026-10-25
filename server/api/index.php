@@ -15,6 +15,7 @@ require __DIR__ . '/lib/events.php';
 require __DIR__ . '/lib/bi.php';
 require __DIR__ . '/lib/account.php';
 require __DIR__ . '/lib/status.php';
+require __DIR__ . '/lib/requests.php';
 
 try {
     cors();
@@ -41,6 +42,14 @@ try {
         ['GET', '/auth/me', fn() => auth_me()],
         ['POST', '/auth/forgot', fn() => auth_forgot()],
         ['POST', '/me/verify/resend', fn() => resend_verify()],
+        ['PUT', '/me/profile', fn() => update_profile()],
+        ['POST', '/requests', fn() => create_request()],
+        ['GET', '/me/requests', fn() => my_requests()],
+        ['GET', '/me/yard/requests', fn() => yard_requests()],
+        ['PUT', '/me/yard/requests/{id}', fn($id) => reply_request($id)],
+        ['GET', '/me/favorites', fn() => my_favorites()],
+        ['PUT', '/me/favorites/{id}', fn($id) => set_favorite($id, true)],
+        ['DELETE', '/me/favorites/{id}', fn($id) => set_favorite($id, false)],
 
         ['GET', '/me/yard', fn() => ['yard' => my_yard()]],
         ['POST', '/me/yard', fn() => create_my_yard()],

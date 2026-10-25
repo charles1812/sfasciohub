@@ -111,7 +111,7 @@ function ai_usage_table_sql(bool $sqlite): string
         )$engine";
 }
 
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 
 /**
  * Modifiche allo schema per i server già installati. Ogni versione gira una volta sola
@@ -206,6 +206,37 @@ function migrate_schema(PDO $pdo, bool $sqlite): void
             "CREATE TABLE IF NOT EXISTS settings (
                 k VARCHAR(40) NOT NULL PRIMARY KEY,
                 v $text
+            )$engine",
+        ],
+        // profilo dei clienti, richieste di ricambi con risposta del piazzale, auto preferite
+        9 => [
+            "ALTER TABLE users ADD COLUMN name VARCHAR(80) NOT NULL DEFAULT ''",
+            "ALTER TABLE users ADD COLUMN phone VARCHAR(40) NOT NULL DEFAULT ''",
+            "CREATE TABLE IF NOT EXISTS part_requests (
+                id CHAR(36) NOT NULL PRIMARY KEY,
+                yard_id CHAR(36) NOT NULL,
+                vehicle_id CHAR(36) NULL,
+                customer_id CHAR(36) NOT NULL,
+                part_text VARCHAR(160) NOT NULL,
+                part_id VARCHAR(40) NULL,
+                note $text,
+                status VARCHAR(12) NOT NULL DEFAULT 'open',
+                reply $text,
+                price VARCHAR(40) NULL,
+                created_at $dt NOT NULL,
+                replied_at $dt NULL,
+                FOREIGN KEY (yard_id) REFERENCES yards(id) ON DELETE CASCADE,
+                FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE
+            )$engine",
+            'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'part_requests_yard_idx ON part_requests (yard_id, status, created_at)',
+            'CREATE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'part_requests_customer_idx ON part_requests (customer_id, created_at)',
+            "CREATE TABLE IF NOT EXISTS favorites (
+                user_id CHAR(36) NOT NULL,
+                vehicle_id CHAR(36) NOT NULL,
+                created_at $dt NOT NULL,
+                PRIMARY KEY (user_id, vehicle_id),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
             )$engine",
         ],
     ];

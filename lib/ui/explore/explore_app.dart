@@ -7,6 +7,7 @@ import '../../data/repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/updater.dart';
+import 'account.dart';
 import 'vehicle_page.dart';
 import 'yard_page.dart';
 
@@ -46,10 +47,12 @@ class _ExploreHomeState extends State<ExploreHome> {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 900;
-    final pages = [const SearchTab(), const YardsTab(), const AboutTab()];
-    const dests = [
+    final server = !Repository.instance.isDemo;
+    final pages = [const SearchTab(), const YardsTab(), if (server) const ProfileTab(), const AboutTab()];
+    final dests = [
       (Icons.search, 'Cerca'),
       (Icons.warehouse_outlined, 'Sfasciacarrozze'),
+      if (server) (Icons.person_outline, 'Profilo'),
       (Icons.info_outline, 'Info'),
     ];
     return Scaffold(

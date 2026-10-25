@@ -7,6 +7,7 @@ import '../../data/repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/damage_map.dart';
+import 'account.dart';
 import 'ask_part.dart';
 
 class VehiclePage extends StatefulWidget {
@@ -174,6 +175,7 @@ class VehicleDetails extends StatelessWidget {
       appBar: AppBar(
         title: Text(preview ? 'Anteprima pubblica' : v.title),
         actions: [
+          if (!preview && !Repository.instance.isDemo) FavoriteButton(vehicle: v),
           if (!preview)
             IconButton(
               tooltip: 'Copia link',

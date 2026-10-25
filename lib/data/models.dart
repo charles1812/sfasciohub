@@ -344,3 +344,33 @@ String _thousands(int n) {
   }
   return b.toString();
 }
+
+/// Richiesta di un ricambio: il cliente chiede, il piazzale risponde (c'è / non c'è, prezzo, messaggio).
+class PartRequest {
+  PartRequest.fromJson(Map<String, dynamic> j)
+      : id = j['id'] as String,
+        vehicleId = j['vehicle_id'] as String?,
+        vehicle = (j['vehicle'] ?? '') as String,
+        yardId = (j['yard_id'] ?? '') as String,
+        yardName = (j['yard_name'] ?? '') as String,
+        part = (j['part'] ?? '') as String,
+        note = (j['note'] ?? '') as String,
+        status = (j['status'] ?? 'open') as String,
+        reply = (j['reply'] ?? '') as String,
+        price = (j['price'] ?? '') as String,
+        createdAt = DateTime.tryParse('${(j['created_at'] ?? '').toString().replaceFirst(' ', 'T')}Z')?.toLocal(),
+        repliedAt = DateTime.tryParse('${(j['replied_at'] ?? '').toString().replaceFirst(' ', 'T')}Z')?.toLocal(),
+        customerName = ((j['customer'] as Map?)?['name'] ?? '') as String,
+        customerPhone = ((j['customer'] as Map?)?['phone'] ?? '') as String,
+        customerEmail = ((j['customer'] as Map?)?['email'] ?? '') as String;
+
+  final String id, vehicle, yardId, yardName, part, note, status, reply, price;
+  final String? vehicleId;
+  final DateTime? createdAt, repliedAt;
+
+  /// Solo per il piazzale: chi ha chiesto.
+  final String customerName, customerPhone, customerEmail;
+
+  bool get open => status == 'open';
+  bool get available => status == 'available';
+}

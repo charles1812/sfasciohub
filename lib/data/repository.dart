@@ -6,12 +6,19 @@ import 'models.dart';
 import 'php_repository.dart';
 
 class AppUser {
-  const AppUser({required this.id, required this.email, this.emailVerified = true});
+  const AppUser({required this.id, required this.email, this.emailVerified = true, this.name = '', this.phone = '', this.hasYard = false});
   final String id;
   final String email;
 
   /// false finché non apre il link di conferma arrivato per email.
   final bool emailVerified;
+
+  /// Profilo: nome e telefono servono al piazzale per rispondere alle richieste.
+  final String name;
+  final String phone;
+
+  /// Gestisce uno sfasciacarrozze.
+  final bool hasYard;
 }
 
 class RepoException implements Exception {
@@ -82,6 +89,28 @@ abstract class Repository extends ChangeNotifier {
 
   /// Segnala al server un errore dell'app (lo vedi nell'app Admin, scheda Errori).
   void reportError(Map<String, String> error) {}
+
+  // ---- profilo cliente, richieste di ricambi, preferiti (solo con il server) ----
+  Future<void> updateProfile({required String name, required String phone}) async => throw RepoException(_serverOnly);
+
+  /// Il cliente chiede al piazzale se ha un pezzo di quest'auto.
+  Future<PartRequest> sendPartRequest(Vehicle v, {required String part, String? partId, String note = '', required String name, required String phone}) async =>
+      throw RepoException(_serverOnly);
+
+  /// Le richieste che ho mandato (cliente).
+  Future<List<PartRequest>> myRequests() async => [];
+
+  /// Le richieste arrivate al mio piazzale.
+  Future<List<PartRequest>> yardRequests() async => [];
+
+  /// Il piazzale risponde: [available] c'è o non c'è, con prezzo e messaggio facoltativi.
+  Future<PartRequest> replyRequest(PartRequest r, {required bool available, String price = '', String reply = ''}) async =>
+      throw RepoException(_serverOnly);
+
+  Future<List<Vehicle>> favorites() async => [];
+  Future<void> setFavorite(Vehicle v, bool on) async => throw RepoException(_serverOnly);
+
+  static const _serverOnly = 'Disponibile solo con il server.';
 
   // ---- gestione (utente loggato) ----
   Future<Yard?> myYard();
