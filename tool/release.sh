@@ -5,7 +5,10 @@
 #
 #   tool/release.sh "note della versione"
 #
-# Versione e numero di build si prendono da pubspec.yaml (version: 1.7.0+10).
+# Versione e numero di build si prendono da pubspec.yaml (version: 1.8.1+2014).
+# Il numero di build deve solo crescere, e da 1.8.1 parte da 2014: prima l'APK arm64 aveva 2000 + build
+# (Flutter lo aggiunge per tipo di processore) e le app installate non vedevano gli aggiornamenti.
+# Ora tutti gli APK hanno lo stesso numero, quello di pubspec.yaml.
 # Gli APK si firmano con la chiave in ~/.sfasciohub/ (vedi android/app/build.gradle.kts).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,6 +18,8 @@ SITE="${SFASCIOHUB_SITE:-https://white-ferret-597873.hostingersite.com/sfasciohu
 REPO="charles1812/sfasciohub"
 VER=$(sed -n 's/^version: \([0-9.]*\)+\([0-9]*\).*/\1/p' pubspec.yaml)
 BUILD=$(sed -n 's/^version: \([0-9.]*\)+\([0-9]*\).*/\2/p' pubspec.yaml)
+LAST=$(curl -sL "https://github.com/$REPO/releases/latest/download/version.json" | sed -n 's/.*"build": *\([0-9]*\).*/\1/p')
+(( BUILD > ${LAST:-0} )) || { echo "Il build $BUILD in pubspec.yaml deve essere più alto dell'ultimo pubblicato ($LAST)" >&2; exit 1; }
 [[ -f "$HOME/.sfasciohub/release.properties" ]] || { echo "Manca la chiave di firma in ~/.sfasciohub/" >&2; exit 1; }
 D=(--dart-define=API_URL="${SITE}api/" --dart-define=SITE_URL="$SITE")
 OUT=build/release
@@ -26,7 +31,8 @@ apk() { # flavor, entry point, nome del file senza .apk
   flutter build apk --release --flavor "$1" -t "lib/$2.dart" --target-platform android-arm,android-arm64 "${D[@]}" \
     | grep -q "Built" || { echo "Build $1 non riuscita" >&2; exit 1; }
   cp "build/app/outputs/flutter-apk/app-$1-release.apk" "$OUT/$3.apk"
-  flutter build apk --release --flavor "$1" -t "lib/$2.dart" --split-per-abi --target-platform android-arm64 "${D[@]}" \
+  flutter build apk --release --flavor "$1" -t "lib/$2.dart" --split-per-abi --target-platform android-arm64 \
+    --android-project-arg force-version-code-ignoring-abi=true "${D[@]}" \
     | grep -q "Built" || { echo "Build $1 arm64 non riuscita" >&2; exit 1; }
   cp "build/app/outputs/flutter-apk/app-arm64-v8a-$1-release.apk" "$OUT/$3-arm64.apk"
   echo "$1 ok"
