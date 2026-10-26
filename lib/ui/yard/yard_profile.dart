@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../data/models.dart';
 import '../../data/repository.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 
 /// Dati dello sfasciacarrozze: alla prima apertura (onboarding) e poi in
@@ -89,6 +91,11 @@ class _YardProfilePageState extends State<YardProfilePage> {
               const Text('Queste informazioni compaiono sul sito pubblico, accanto a ogni veicolo. Puoi cambiarle quando vuoi.'),
               const SizedBox(height: 18),
             ],
+            // _y è una copia senza i campi del server: il link lo prende dal piazzale originale
+            if (!widget.onboarding && (widget.yard?.catalogUrl ?? '').isNotEmpty) ...[
+              CatalogCard(yard: widget.yard!),
+              const SizedBox(height: 16),
+            ],
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -114,6 +121,13 @@ class _YardProfilePageState extends State<YardProfilePage> {
                     value: _y.published,
                     onChanged: (b) => setState(() => _y.published = b),
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Richieste anche su WhatsApp'),
+                    subtitle: const Text('Quando un cliente chiede un pezzo dall\'app, ti arriva anche un messaggio sul numero WhatsApp qui sopra'),
+                    value: _y.waLeads,
+                    onChanged: (b) => setState(() => _y.waLeads = b),
+                  ),
                 ]),
               ),
             ),
@@ -129,5 +143,61 @@ class _YardProfilePageState extends State<YardProfilePage> {
       ]),
     );
     return widget.onboarding ? Scaffold(appBar: AppBar(title: const Text('Il tuo piazzale')), body: form) : form;
+  }
+}
+
+/// Il catalogo del piazzale da condividere: un link corto che su WhatsApp mostra foto e nome.
+class CatalogCard extends StatelessWidget {
+  const CatalogCard({super.key, required this.yard});
+  final Yard yard;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = yard.catalogUrl;
+    return Glass(
+      gradient: Brand.emerald,
+      blur: 0,
+      padding: const EdgeInsets.all(18),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Il tuo catalogo', style: display(22, color: Colors.white)),
+        const SizedBox(height: 4),
+        const Text('Mandalo ai clienti, mettilo nello stato di WhatsApp o su Facebook: vedono tutte le tue auto '
+            'e ti chiedono i pezzi su WhatsApp.', style: TextStyle(color: Colors.white)),
+        if (!yard.published || !yard.approved) ...[
+          const SizedBox(height: 8),
+          Text(!yard.approved ? 'Il catalogo si apre appena il piazzale viene approvato.' : 'Il piazzale è nascosto: rendilo visibile qui sotto per aprire il catalogo.',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        ],
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(12)),
+          child: SelectableText(url, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(height: 12),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF25D366), foregroundColor: const Color(0xFF06331B)),
+            onPressed: () => openUrl('https://wa.me/?text=${Uri.encodeComponent('Le auto di ${yard.name} da cui recuperare ricambi: $url')}'),
+            icon: const Icon(Icons.chat),
+            label: const Text('Manda su WhatsApp'),
+          ),
+          FilledButton.tonalIcon(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: url));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link del catalogo copiato')));
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Copia link'),
+          ),
+          TextButton.icon(
+            onPressed: () => openUrl(url),
+            icon: const Icon(Icons.open_in_new, size: 18, color: Colors.white),
+            label: const Text('Apri', style: TextStyle(color: Colors.white)),
+          ),
+        ]),
+      ]),
+    );
   }
 }

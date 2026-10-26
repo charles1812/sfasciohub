@@ -111,7 +111,7 @@ function ai_usage_table_sql(bool $sqlite): string
         )$engine";
 }
 
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 
 /**
  * Modifiche allo schema per i server già installati. Ogni versione gira una volta sola
@@ -238,6 +238,12 @@ function migrate_schema(PDO $pdo, bool $sqlite): void
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
             )$engine",
+        ],
+        // indirizzo corto del catalogo (sito/c/nome-piazzale) e richieste anche su WhatsApp
+        10 => [
+            'ALTER TABLE yards ADD COLUMN slug VARCHAR(60) NULL',
+            'CREATE UNIQUE INDEX ' . ($sqlite ? 'IF NOT EXISTS ' : '') . 'yards_slug_idx ON yards (slug)',
+            "ALTER TABLE yards ADD COLUMN wa_leads $bool NOT NULL DEFAULT 1",
         ],
     ];
     foreach ($steps as $v => $sqls) {

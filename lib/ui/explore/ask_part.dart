@@ -109,12 +109,24 @@ class _AskSheetState extends State<_AskSheet> {
       await repo.sendPartRequest(v, part: _what, partId: typed ? null : _part?.id, note: _note.text, name: _name.text, phone: _phone.text);
       repo.track('part', vehicleId: v.id, partId: typed ? null : _part?.id, text: _what);
       if (!mounted) return;
+      final y = v.yard!;
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
+      // la richiesta arriva anche sul WhatsApp del piazzale, come messaggio del cliente
+      final wa = y.waLeads ? y.waNumber : '';
+      if (wa.isNotEmpty) {
+        final note = _note.text.trim();
+        final msg = 'Buongiorno, sono ${_name.text.trim()}. Vi ho chiesto su SfascioHub: $_what '
+            "per la ${v.title}${v.year == null ? '' : ' ${v.year}'}. Ce l'avete? Quanto costa?"
+            '${note.isEmpty ? '' : '\n$note'}\nIl mio numero: ${_phone.text.trim()}';
+        openUrl('https://wa.me/$wa?text=${Uri.encodeComponent(msg)}');
+      }
       messenger.showSnackBar(SnackBar(
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 6),
-        content: Text('Richiesta mandata a ${v.yard!.name}. La risposta la trovi nel Profilo e ti arriva per email.'),
+        content: Text(wa.isNotEmpty
+            ? 'Richiesta salvata: premi invio su WhatsApp per mandarla subito a ${y.name}. La risposta la trovi anche nel Profilo.'
+            : 'Richiesta mandata a ${y.name}. La risposta la trovi nel Profilo e ti arriva per email.'),
       ));
     } catch (e) {
       if (mounted) showError(context, e);
@@ -207,7 +219,9 @@ class _AskSheetState extends State<_AskSheet> {
               label: Text(logged ? "Chiedi se c'è" : "Accedi e chiedi se c'è"),
             ),
             const SizedBox(height: 4),
-            Text("Il piazzale ti risponde nell'app (scheda Profilo) e per email.", textAlign: TextAlign.center, style: t.bodySmall),
+            Text(y.waLeads && y.waNumber.isNotEmpty
+                ? "Arriva al piazzale nell'app e su WhatsApp. La risposta la trovi nel Profilo."
+                : "Il piazzale ti risponde nell'app (scheda Profilo) e per email.", textAlign: TextAlign.center, style: t.bodySmall),
             const SizedBox(height: 14),
             Text('Oppure contattalo subito', style: t.labelLarge?.copyWith(color: Brand.muted)),
             const SizedBox(height: 8),

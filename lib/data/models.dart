@@ -109,6 +109,9 @@ class Yard {
     this.lng,
     this.published = true,
     this.approved = true,
+    this.slug = '',
+    this.catalogUrl = '',
+    this.waLeads = true,
   });
 
   final String id;
@@ -129,6 +132,22 @@ class Yard {
   /// I piazzali nuovi restano nascosti ai clienti finché un amministratore non li approva.
   final bool approved;
 
+  /// Catalogo da condividere: `sito/c/<slug>`, con anteprima su WhatsApp.
+  final String slug;
+  final String catalogUrl;
+
+  /// Le richieste di ricambi dall'app arrivano anche su WhatsApp.
+  bool waLeads;
+
+  /// Numero per wa.me: solo cifre, con il prefisso italiano se manca ('' se non c'è).
+  String get waNumber {
+    var n = (whatsapp.isNotEmpty ? whatsapp : '').replaceAll(RegExp(r'[^0-9+]'), '');
+    if (n.isEmpty) return '';
+    if (n.startsWith('+')) return n.substring(1);
+    if (n.startsWith('00')) return n.substring(2);
+    return n.startsWith('39') && n.length > 10 ? n : '39$n';
+  }
+
   String get place => [city, if (province.isNotEmpty) '($province)'].where((s) => s.isNotEmpty).join(' ');
 
   factory Yard.fromJson(Map<String, dynamic> j) => Yard(
@@ -147,6 +166,9 @@ class Yard {
         lng: (j['lng'] as num?)?.toDouble(),
         published: (j['published'] ?? true) as bool,
         approved: (j['approved'] ?? true) as bool,
+        slug: (j['slug'] ?? '') as String,
+        catalogUrl: (j['catalog_url'] ?? '') as String,
+        waLeads: (j['wa_leads'] ?? true) as bool,
       );
 
   Map<String, dynamic> toJson() => {
@@ -164,6 +186,7 @@ class Yard {
         'lat': lat,
         'lng': lng,
         'published': published,
+        'wa_leads': waLeads,
       };
 }
 

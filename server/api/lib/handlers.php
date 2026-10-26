@@ -9,8 +9,37 @@ const MAX_PHOTOS = 20;
 // Formato delle risposte (stesse chiavi che usa l'app Flutter)
 // ---------------------------------------------------------------------------
 
+/** "Autodemolizioni Rossi & C." → "autodemolizioni-rossi-c" */
+function slugify(string $s): string
+{
+    $s = mb_strtolower(trim($s));
+    $s = strtr($s, ['à' => 'a', 'á' => 'a', 'è' => 'e', 'é' => 'e', 'ì' => 'i', 'í' => 'i', 'ò' => 'o', 'ó' => 'o', 'ù' => 'u', 'ú' => 'u', '&' => ' e ']);
+    $s = trim((string) preg_replace('/[^a-z0-9]+/', '-', $s), '-');
+    return substr($s, 0, 50) ?: 'piazzale';
+}
+
+/** Nome corto del catalogo: lo crea la prima volta e poi non cambia (i link condivisi restano validi). */
+function yard_slug(array $y): string
+{
+    if (!empty($y['slug'])) {
+        return $y['slug'];
+    }
+    $base = slugify($y['name']);
+    $st = db()->prepare('SELECT 1 FROM yards WHERE slug = ? AND id <> ?');
+    for ($i = 1; ; $i++) {
+        $slug = $i === 1 ? $base : "$base-$i";
+        $st->execute([$slug, $y['id']]);
+        if (!$st->fetchColumn()) {
+            break;
+        }
+    }
+    db()->prepare('UPDATE yards SET slug = ? WHERE id = ?')->execute([$slug, $y['id']]);
+    return $slug;
+}
+
 function yard_out(array $y): array
 {
+    $slug = array_key_exists('slug', $y) ? yard_slug($y) : '';
     return [
         'id' => $y['id'],
         'owner_id' => $y['owner_id'],
@@ -27,6 +56,9 @@ function yard_out(array $y): array
         'lng' => $y['lng'] === null ? null : (float) $y['lng'],
         'published' => (bool) $y['published'],
         'approved' => (bool) ($y['approved'] ?? true),
+        'slug' => $slug,
+        'catalog_url' => $slug === '' ? '' : base_url() . '/c/' . $slug,
+        'wa_leads' => (bool) ($y['wa_leads'] ?? true),
     ];
 }
 
@@ -198,6 +230,7 @@ function yard_fields(array $b): array
         'lat' => is_numeric($lat) ? (float) $lat : null,
         'lng' => is_numeric($lng) ? (float) $lng : null,
         'published' => array_key_exists('published', $b) ? (int) (bool) $b['published'] : 1,
+        'wa_leads' => array_key_exists('wa_leads', $b) ? (int) (bool) $b['wa_leads'] : 1,
     ];
 }
 
@@ -219,8 +252,8 @@ function create_my_yard(): array
     $pdo->beginTransaction();
     // i piazzali nuovi restano nascosti ai clienti finché un amministratore non li approva
     $approved = $u['is_admin'] ? 1 : 0;
-    $pdo->prepare('INSERT INTO yards (id, owner_id, name, city, province, address, phone, whatsapp, email, hours, description, lat, lng, published, approved, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    $pdo->prepare('INSERT INTO yards (id, owner_id, name, city, province, address, phone, whatsapp, email, hours, description, lat, lng, published, wa_leads, approved, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
         ->execute([$id, $u['id'], ...array_values($f), $approved, now()]);
     $pdo->prepare("INSERT INTO yard_members (yard_id, user_id, role) VALUES (?, ?, 'owner')")->execute([$id, $u['id']]);
     $pdo->commit();

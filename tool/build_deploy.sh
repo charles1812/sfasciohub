@@ -51,6 +51,10 @@ sed -i 's#content="SfascioHub">#content="SfascioHub Admin">#' "$OUT/admin/index.
 mkdir -p "$OUT/app"
 cp server/app/index.html server/app/.htaccess "$OUT/app/"
 
+# catalogo condivisibile dei piazzali (sito/c/nome-piazzale)
+mkdir -p "$OUT/c"
+cp server/c/index.php server/c/.htaccess "$OUT/c/"
+
 # API e cartella foto, senza configurazioni o database locali
 mkdir -p "$OUT/api" "$OUT/uploads"
 cp -r server/api/. "$OUT/api/"

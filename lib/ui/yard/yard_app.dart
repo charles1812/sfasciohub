@@ -318,10 +318,17 @@ class _YardHomeState extends State<YardHome> {
           ])),
         ]),
         actions: [
+          if (widget.yard.catalogUrl.isNotEmpty)
+            IconButton(
+              tooltip: 'Condividi il catalogo su WhatsApp',
+              icon: const Icon(Icons.share),
+              onPressed: () => openUrl('https://wa.me/?text=${Uri.encodeComponent(
+                  'Le auto di ${widget.yard.name} da cui recuperare ricambi: ${widget.yard.catalogUrl}')}'),
+            ),
           IconButton(
             tooltip: 'Vedi sul sito pubblico',
             icon: const Icon(Icons.public),
-            onPressed: () => openUrl('${AppConfig.site}#/sfasciacarrozze/${widget.yard.id}'),
+            onPressed: () => openUrl(widget.yard.catalogUrl.isNotEmpty ? widget.yard.catalogUrl : '${AppConfig.site}#/sfasciacarrozze/${widget.yard.id}'),
           ),
           PopupMenuButton<String>(
             onSelected: (v) async {
